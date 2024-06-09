@@ -68,15 +68,18 @@ const SPRITES = TIMESTAMPS.words.reduce(
   {}
 );
 
-console.log({ SPRITES })
+const INIT_TIME_STATE = {
+  start: 0,
+  currMs: 0,
+  timeout: 0,
+}
 
 export default function TextToSpeechComponent() {
 
   const [currWordIndex, setCurrWordIndex] = useState(-1);
-  console.log({currWordIndex})
-  const timeState = useRef<any>();
+  const timeState = useRef<any>(INIT_TIME_STATE);
 
-  const [play] = useSound(
+  const [play, { stop }] = useSound(
     "https://firebasestorage.googleapis.com/v0/b/talksync-a32f9.appspot.com/o/speech.mp3?alt=media&token=b2352bbe-ee92-464f-b609-b3cc67aa211f",
     // {
     //   sprite: SPRITES,
@@ -84,11 +87,18 @@ export default function TextToSpeechComponent() {
   );
 
   const playAudio = () => {
+    if (currWordIndex > -1) {
+      stop();
+      setCurrWordIndex(-1);
+      clearInterval(timeState.current.timeout);
+      timeState.current = INIT_TIME_STATE;
+      play();
+    }
     play();
     timeState.current = {
       start: Date.now(),
     }
-    setInterval(() => {
+    const timeout = setInterval(() => {
       const currMs = Date.now() - timeState.current.start;
       timeState.current = {
         currMs,
@@ -97,6 +107,7 @@ export default function TextToSpeechComponent() {
       const currWordIndex = TIMESTAMPS.words.findIndex(word => word.start * 1000 <= currMs && word.end * 1000 >= currMs);
       setCurrWordIndex(currWordIndex);
     }, 10)
+    timeState.current = { ...timeState.current, timeout };
   }
 
   const TEXT = `Today is a wonderful day to build something people love!`;
