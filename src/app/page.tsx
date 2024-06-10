@@ -1,26 +1,45 @@
+"use client"
 import TextToSpeechComponent from "@/components/textToSpeechComponent";
+import { CheckIconButton, CheckIconButtonStates } from "@/components/ui/check-icon-button";
+import { Input } from "@/components/ui/input";
 import { getOrMakeAudioAndTranscription } from '@/lib/getOrMakeAudioAndTranscription';
+import { Transcription } from "@/types/audioTypes";
+import { useState } from "react";
  
-const md = `This is the simplest example, hope you enjoy!`;
- 
-export default async function RemoteMdxPage() {
+export default function RemoteMdxPage() {
 
-  // hash the content, look it up in storage, create it if it doesnt exist
-  const { audioUrl, transcription } = await getOrMakeAudioAndTranscription(md);
-  
-  // const audioData = await fs.promises.readFile("./audioFiles/files/wonderful-day.mp3");
+  const [inputValue, setInputValue] = useState("This is the simplest example, hope you enjoy!");
+  const [buttonState, setButtonState] = useState<CheckIconButtonStates>("unchecked");
+  const [audioData, setAudioData] = useState<{
+    audioUrl: string;
+    transcription: Transcription;
+  } | null>(null);
 
-  // MDX text - can be from a local file, database, CMS, fetch, anywhere...
-  // const components = useMDXComponents();
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setButtonState("unchecked");
+    setInputValue(e.target.value);
+  }
+
+  const generateAudio = async () => {
+    setButtonState("loading")
+    const data = await getOrMakeAudioAndTranscription(inputValue);
+    console.log({data})
+    setButtonState("checked");
+    setAudioData(data);
+  }
 
   return (
     <div className="wrapper">
       {/* <MDXRemote source={md} components={components} /> */}
-      <TextToSpeechComponent
-        content={md}
-        audioUrl={audioUrl}
-        transcription={transcription}
-      />
+      <div className="flex flex-row max-w-sm mx-auto">
+        <Input onChange={handleInputChange} value={inputValue} />
+        <CheckIconButton onClick={generateAudio} state={buttonState} disabled={buttonState === "checked"} />
+      </div>
+      {audioData && <TextToSpeechComponent
+        content={inputValue}
+        audioUrl={audioData.audioUrl}
+        transcription={audioData.transcription}
+      />}
     </div>
   );
 }

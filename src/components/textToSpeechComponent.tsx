@@ -1,6 +1,6 @@
 "use client"
 import useSound from 'use-sound';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import _ from "lodash";
 import { Transcription } from '@/types/audioTypes';
 
@@ -27,7 +27,6 @@ export default function TextToSpeechComponent({
 
   const [currWordIndex, setCurrWordIndex] = useState(-1);
   const timeState = useRef<any>(INIT_TIME_STATE);
-
   const [play, { stop }] = useSound(
     audioUrl
     // {
@@ -35,13 +34,20 @@ export default function TextToSpeechComponent({
     // }
   );
 
+  const reInitEverything = () => {
+    stop();
+    setCurrWordIndex(-1);
+    clearInterval(timeState.current.timeout);
+    timeState.current = INIT_TIME_STATE;
+  };
+
+  useEffect(() => {
+    reInitEverything();
+  }, [content])
+
   const playAudio = () => {
     if (currWordIndex > -1) {
-      stop();
-      setCurrWordIndex(-1);
-      clearInterval(timeState.current.timeout);
-      timeState.current = INIT_TIME_STATE;
-      play();
+      reInitEverything();
     }
     play();
     timeState.current = {
