@@ -7,7 +7,6 @@ export const getOrMakeAudioAndTranscription = async (
   content: string
 ): Promise<{ audioUrl: string; transcription: Transcription }> => {
   const contentHash = getContentHash(content);
-  console.log("DOWNLOADING AUDIO FILE: ", contentHash)
   let { audioUrl, transcription } = await downloadAudioFile(contentHash);
   if (!audioUrl || !transcription) {
     console.warn(

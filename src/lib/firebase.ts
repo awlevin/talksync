@@ -19,7 +19,7 @@ export const downloadAudioFile = async (
   } catch (err) {
     switch ((err as FirebaseError).code) {
       case "storage/object-not-found":
-        console.log("Firebase Error: No audio or transcription found");
+        console.error("Firebase Error: No audio or transcription found");
         break;
       case "storage/unauthorized":
         console.error("Firebase Error: User doesn't have permission to access the object");

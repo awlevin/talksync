@@ -7,7 +7,6 @@ export default async function RemoteMdxPage() {
 
   // hash the content, look it up in storage, create it if it doesnt exist
   const { audioUrl, transcription } = await getOrMakeAudioAndTranscription(md);
-  console.log({ audioUrl, transcription })
   
   // const audioData = await fs.promises.readFile("./audioFiles/files/wonderful-day.mp3");
 
