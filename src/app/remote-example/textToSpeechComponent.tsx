@@ -1,6 +1,5 @@
 "use client"
 import useSound from 'use-sound';
-import { nanoid } from "nanoid";
 import { useRef, useState } from 'react';
 import _ from "lodash";
 import { Transcription } from '@/types/audioTypes';
@@ -26,7 +25,6 @@ export default function TextToSpeechComponent({
   transcription: Transcription;
 }) {
 
-  console.log({ content, audioUrl, transcription });
   const [currWordIndex, setCurrWordIndex] = useState(-1);
   const timeState = useRef<any>(INIT_TIME_STATE);
 
@@ -55,10 +53,13 @@ export default function TextToSpeechComponent({
         currMs,
         ...timeState.current,
       };
-      const currWordIndex = transcription.words.findIndex(
-        (word) => word.start * 1000 <= currMs && word.end * 1000 >= currMs
+      const currWordIndex = transcription.words.findLastIndex(
+        (word) => word.start * 1000 <= currMs
       );
       setCurrWordIndex(currWordIndex);
+      if (currWordIndex === transcription.words.length - 1) {
+        clearInterval(timeState.current.timeout);
+      }
     }, 10);
     timeState.current = { ...timeState.current, timeout };
   };
