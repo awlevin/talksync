@@ -10,24 +10,18 @@ interface CheckIconButtonProps extends ButtonProps {
   state: CheckIconButtonStates;
 }
 
+export const COMPONENTS = {
+  checked: CheckCheck,
+  unchecked: Check,
+  loading: Loader2,
+}
+
 export function CheckIconButton({
   state,
   ...rest
 }: CheckIconButtonProps) {
   let Component;
-  switch (state) {
-    case "unchecked":
-      Component = Check;
-      break;
-    case "checked":
-      Component = CheckCheck;
-      break;
-    case "loading":
-      Component = Loader2;
-      break;
-    default:
-      return null;
-  }
+  Component = COMPONENTS[state];
   return (
     <Button variant="outline" size="icon" {...rest}>
       <Component className={cn(SIZE, state === "loading" && "animate-spin")} />

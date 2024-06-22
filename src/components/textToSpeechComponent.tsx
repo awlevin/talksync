@@ -17,22 +17,14 @@ const INIT_TIME_STATE = {
 
 export default function TextToSpeechComponent({
   content,
-  audioUrl,
-  transcription,
+  // transcription,
 }: {
   content: string;
-  audioUrl: string;
-  transcription: Transcription;
+  // transcription: Transcription;
 }) {
 
   const [currWordIndex, setCurrWordIndex] = useState(-1);
   const timeState = useRef<any>(INIT_TIME_STATE);
-  const [play, { stop }] = useSound(
-    audioUrl
-    // {
-    //   sprite: SPRITES,
-    // }
-  );
 
   const reInitEverything = () => {
     stop();
@@ -49,7 +41,6 @@ export default function TextToSpeechComponent({
     if (currWordIndex > -1) {
       reInitEverything();
     }
-    play();
     timeState.current = {
       start: Date.now(),
     };
@@ -86,7 +77,7 @@ export default function TextToSpeechComponent({
   );
 
   return (
-    <div onClick={playAudio}>
+    <div onClick={playAudio} className="content-area">
       <span style={{ backgroundColor: "lightgreen" }}>{COVERED.join(" ")}</span>{" "}
       {REMAINING.join(" ")}
     </div>
