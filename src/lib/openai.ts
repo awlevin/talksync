@@ -12,7 +12,7 @@ const openai = new OpenAI();
 
 export const makeSpeech = async (content: string): Promise<ArrayBuffer> => {
   const mp3 = await openai.audio.speech.create({
-    model: "tts-1",
+    model: "tts-1-hd",
     voice: "nova",
     input: content,
   });
