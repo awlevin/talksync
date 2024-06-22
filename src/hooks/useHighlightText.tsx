@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import _ from "lodash";
 import { Transcription } from '@/types/audioTypes';
 

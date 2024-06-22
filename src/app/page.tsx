@@ -2,11 +2,12 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { AudioWidget } from "@/components/widget";
+import { CONTENT_SAMPLE } from "@/hooks";
 
 
 export default function RemoteMdxPage() {
 
-  const [currInputValue, setCurrInputValue] = useState("This is the simplest example, hope you enjoy!");
+  const [currInputValue, setCurrInputValue] = useState(CONTENT_SAMPLE);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrInputValue(e.target.value);
