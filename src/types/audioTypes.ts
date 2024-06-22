@@ -16,3 +16,8 @@ export type Word = {
   end: number
 }
 
+export type TranscriptionResponse = {
+  audioUrl: string;
+  transcription: Transcription;
+};
+

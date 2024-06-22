@@ -1,45 +1,64 @@
 "use client"
-import TextToSpeechComponent from "@/components/textToSpeechComponent";
-import { CheckIconButton, CheckIconButtonStates } from "@/components/ui/check-icon-button";
-import { Input } from "@/components/ui/input";
-import { getOrMakeAudioAndTranscription } from '@/lib/getOrMakeAudioAndTranscription';
-import { Transcription } from "@/types/audioTypes";
 import { useState } from "react";
- 
+import TextToSpeechComponent from "@/components/textToSpeechComponent";
+import { CheckIconButton } from "@/components/ui/check-icon-button";
+import { Input } from "@/components/ui/input";
+import { TranscriptionResponse } from "@/types/audioTypes";
+import useSwrMutation from "swr/mutation";
+
+const fetcher = async (url: string, { arg }: { arg: string }) => {
+  return fetch(url, {
+    method: "POST",
+    body: JSON.stringify({ content: arg }),
+  }).then((res) => res.json());
+};
+
 export default function RemoteMdxPage() {
 
-  const [inputValue, setInputValue] = useState("This is the simplest example, hope you enjoy!");
-  const [buttonState, setButtonState] = useState<CheckIconButtonStates>("unchecked");
-  const [audioData, setAudioData] = useState<{
-    audioUrl: string;
-    transcription: Transcription;
-  } | null>(null);
+  const [currInputValue, setCurrInputValue] = useState("This is the simplest example, hope you enjoy!");
+  const [finalInputValue, setFinalInputValue] = useState(currInputValue);
+  const { data: audioData, error, isMutating, trigger } = useSwrMutation<
+    TranscriptionResponse,
+    Error,
+    string,
+    string
+    >("/api/transcription", fetcher);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setButtonState("unchecked");
-    setInputValue(e.target.value);
+    setCurrInputValue(e.target.value);
   }
 
-  const generateAudio = async () => {
-    setButtonState("loading")
-    const data = await getOrMakeAudioAndTranscription(inputValue);
-    console.log({data})
-    setButtonState("checked");
-    setAudioData(data);
+  const makeRequest = async () => {
+    await trigger(currInputValue);
+    setFinalInputValue(currInputValue);
   }
+
+  const hasInputChanged = currInputValue !== finalInputValue;
+  const buttonState = isMutating
+    ? "loading"
+    : hasInputChanged
+    ? "unchecked" // clickable, fetch again
+    : "checked" // done loading
 
   return (
     <div className="wrapper">
       {/* <MDXRemote source={md} components={components} /> */}
       <div className="flex flex-row max-w-sm mx-auto">
-        <Input onChange={handleInputChange} value={inputValue} />
-        <CheckIconButton onClick={generateAudio} state={buttonState} disabled={buttonState === "checked"} />
+        <Input onChange={handleInputChange} value={currInputValue} />
+        <CheckIconButton
+          onClick={makeRequest}
+          state={buttonState}
+          disabled={["checked", "loading"].includes(buttonState)}
+        />
       </div>
-      {audioData && <TextToSpeechComponent
-        content={inputValue}
-        audioUrl={audioData.audioUrl}
-        transcription={audioData.transcription}
-      />}
+      {error && <p className="text-red-600">Error: {error.message}</p>}
+      {audioData && (
+        <TextToSpeechComponent
+          content={finalInputValue}
+          audioUrl={audioData.audioUrl}
+          transcription={audioData.transcription}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import OpenAI, { toFile } from "openai";
-import fs from "fs";
 import { getContentHash } from './utils';
 import { Transcription } from '@/types/audioTypes';
 
@@ -14,7 +13,7 @@ const openai = new OpenAI();
 export const makeSpeech = async (content: string): Promise<ArrayBuffer> => {
   const mp3 = await openai.audio.speech.create({
     model: "tts-1",
-    voice: "alloy",
+    voice: "nova",
     input: content,
   });
 
