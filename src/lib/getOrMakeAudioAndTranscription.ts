@@ -1,5 +1,3 @@
-"use server"
-
 import { Transcription } from "@/types/audioTypes";
 import { downloadAudioFile, uploadAudioAndTranscription } from "./firebase";
 import { makeSpeech, makeTranscription } from "./openai";
