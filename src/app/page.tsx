@@ -1,30 +1,25 @@
-"use client"
+"use client";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { AudioWidget } from "@/components/widget";
 import { CONTENT_SAMPLE } from "@/hooks";
 
-
-export default function RemoteMdxPage() {
-
-  const [currInputValue, setCurrInputValue] = useState(CONTENT_SAMPLE);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrInputValue(e.target.value);
-  }
+export default function HomePage() {
+  const [content, setContent] = useState(CONTENT_SAMPLE);
 
   return (
-    <div className="wrapper">
-      <div className="flex flex-row max-w-sm mx-auto">
-        <Input onChange={handleInputChange} value={currInputValue} />
+    <div className="space-y-6">
+      <div className="max-w-2xl mx-auto">
+        <Input
+          onChange={(e) => setContent(e.target.value)}
+          value={content}
+          placeholder="Type something to read aloud…"
+        />
       </div>
 
-      <div id="content-area">
-        {currInputValue}
+      <div className="max-w-2xl mx-auto">
+        <AudioWidget content={content} />
       </div>
-
-      <AudioWidget />
     </div>
   );
 }
-
