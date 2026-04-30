@@ -7,7 +7,7 @@ import { Transcription } from "@/types/audioTypes";
 
 export const makeSpeech = async (content: string): Promise<ArrayBuffer> => {
   const { audio } = await generateSpeech({
-    model: openai.speech("tts-1-hd"),
+    model: openai.speech("tts-1"),
     text: content,
     voice: "nova",
   });
