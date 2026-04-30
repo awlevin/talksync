@@ -22,7 +22,7 @@ export const useHighlightText = ({
   useEffect(() => {
     if (!transcription || !isPlaying) return;
     const newWordIndex = transcription.words.findLastIndex(
-      (w) => w.start <= currentTime + LOOKAHEAD_SECONDS,
+      (w) => w.startSecond <= currentTime + LOOKAHEAD_SECONDS,
     );
     if (newWordIndex !== -1) setCurrWordIndex(newWordIndex);
   }, [isPlaying, currentTime, transcription]);

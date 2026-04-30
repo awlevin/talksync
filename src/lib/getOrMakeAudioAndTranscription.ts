@@ -13,7 +13,7 @@ export const getOrMakeAudioAndTranscription = async (
       "No audio or transcription found, creating new audio and transcription"
     );
     const audioData = await makeSpeech(content);
-    transcription = await makeTranscription(audioData, content);
+    transcription = await makeTranscription(audioData);
     const { audioUrl: audUrl, transcription: trans } =
       await uploadAudioAndTranscription({
         contentHash,

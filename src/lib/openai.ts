@@ -1,38 +1,44 @@
-import dotenv from 'dotenv';
-import OpenAI, { toFile } from "openai";
-import { getContentHash } from './utils';
-import { Transcription } from '@/types/audioTypes';
-
-dotenv.config();
-
-const openai = new OpenAI();
-
-// const FILE_NAME = "wonderful-day";
-// const audioPath = path.resolve(`./audioFiles/files/${FILE_NAME}`);
+import {
+  experimental_generateSpeech as generateSpeech,
+  experimental_transcribe as transcribe,
+} from "ai";
+import { openai } from "@ai-sdk/openai";
+import { Transcription } from "@/types/audioTypes";
 
 export const makeSpeech = async (content: string): Promise<ArrayBuffer> => {
-  const mp3 = await openai.audio.speech.create({
-    model: "tts-1-hd",
+  const { audio } = await generateSpeech({
+    model: openai.speech("tts-1-hd"),
+    text: content,
     voice: "nova",
-    input: content,
   });
-
-  return mp3.arrayBuffer();
+  const bytes = audio.uint8Array;
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 };
 
 export const makeTranscription = async (
-  audioData: ArrayBuffer,
-  content: string
+  audioData: ArrayBuffer
 ): Promise<Transcription> => {
-  const contentHash = getContentHash(content);
-
-  const audioFile = await toFile(Buffer.from(audioData), `${contentHash}.mp3`);
-  const transcription = await openai.audio.transcriptions.create({
-    file: audioFile,
-    model: "whisper-1",
-    response_format: "verbose_json",
-    timestamp_granularities: ["word"],
+  const result = await transcribe({
+    model: openai.transcription("whisper-1"),
+    audio: new Uint8Array(audioData),
+    providerOptions: {
+      openai: {
+        timestampGranularities: ["word"],
+        language: "en",
+        temperature: 0.5,
+        prompt: "Don't stop transcribing early please!",
+      },
+    },
   });
 
-  return transcription as Transcription; // this blows, idk how to get the right openAI type for this
+  return {
+    text: result.text,
+    language: result.language,
+    durationInSeconds: result.durationInSeconds,
+    words: result.segments.map((s) => ({
+      text: s.text,
+      startSecond: s.startSecond,
+      endSecond: s.endSecond,
+    })),
+  };
 };
