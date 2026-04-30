@@ -1,29 +1,17 @@
 import { Transcription } from "@/types/audioTypes";
-import { downloadAudioFile, uploadAudioAndTranscription } from "./firebase";
+import { cacheAudio, getCachedAudio } from "./storage";
 import { makeSpeech, makeTranscription } from "./openai";
 import { getContentHash } from "./utils";
 
 export const getOrMakeAudioAndTranscription = async (
-  content: string
+  content: string,
 ): Promise<{ audioUrl: string; transcription: Transcription }> => {
   const contentHash = getContentHash(content);
-  let { audioUrl, transcription } = await downloadAudioFile(contentHash);
-  if (!audioUrl || !transcription) {
-    console.warn(
-      "No audio or transcription found, creating new audio and transcription"
-    );
-    const audioData = await makeSpeech(content);
-    transcription = await makeTranscription(audioData);
-    const { audioUrl: audUrl, transcription: trans } =
-      await uploadAudioAndTranscription({
-        contentHash,
-        content,
-        audioData,
-        transcription,
-      });
-    audioUrl = audUrl;
-    transcription = trans;
-  }
+  const cached = await getCachedAudio(contentHash);
+  if (cached) return cached;
 
-  return { audioUrl, transcription };
+  console.log("cache miss, generating audio + transcription");
+  const audioData = await makeSpeech(content);
+  const transcription = await makeTranscription(audioData);
+  return cacheAudio({ contentHash, audioData, transcription });
 };
