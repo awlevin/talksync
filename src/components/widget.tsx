@@ -148,16 +148,18 @@ const ProgressBar = ({ currentTime, duration, onSeek }: ProgressBarProps) => {
         aria-valuemin={0}
         aria-valuemax={Math.round(duration)}
         aria-valuenow={Math.round(currentTime)}
-        className="group relative h-px flex-1 cursor-pointer bg-border"
+        className="group relative flex h-6 flex-1 cursor-pointer items-center"
       >
-        <div
-          className="absolute inset-y-0 left-0 bg-foreground"
-          style={{ width: `${pct}%` }}
-        />
-        <div
-          className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-          style={{ left: `${pct}%` }}
-        />
+        <div className="relative h-px w-full bg-border">
+          <div
+            className="absolute inset-y-0 left-0 bg-foreground"
+            style={{ width: `${pct}%` }}
+          />
+          <div
+            className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            style={{ left: `${pct}%` }}
+          />
+        </div>
       </div>
       <div className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-muted-foreground">
         {formatTime(currentTime)}
