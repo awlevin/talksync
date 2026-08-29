@@ -16,10 +16,27 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const TITLE = "TalkSync — A Reading Companion";
+const DESCRIPTION =
+  "Type a passage. Listen along. Words light up as they're spoken.";
+const SITE_URL = "https://talksync-six.vercel.app";
+
 export const metadata: Metadata = {
-  title: "TalkSync — A Reading Companion",
-  description:
-    "Type a passage. Listen along. Words light up as they're spoken.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "TalkSync",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
