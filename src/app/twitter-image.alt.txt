@@ -1,1 +1,0 @@
-TalkSync — a React component that speaks your text and lights up each word as it is spoken.
