@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
+import { alignTokens, tokenIndexAt, type SpokenSpan } from "./align";
 import { createEndpointAligner, DEFAULT_ENDPOINT } from "./fetchAlignment";
 import { tokenize } from "./tokenize";
 import type {
@@ -146,6 +147,22 @@ export const useSpokenText = (
   const { words: sourceWords } = useMemo(() => tokenize(source), [source]);
   const timings = data?.words;
 
+  /**
+   * One span per rendered token. The transcriber does not split on whitespace,
+   * so the two lists are aligned rather than zipped — see `align.ts`. A token
+   * it could not place stays `undefined` instead of borrowing its neighbour's
+   * timing.
+   */
+  const spans = useMemo<(SpokenSpan | undefined)[]>(() => {
+    if (!timings?.length) return new Array(sourceWords.length).fill(undefined);
+    try {
+      return alignTokens(sourceWords, timings);
+    } catch {
+      // Never take the passage down over a timing problem: render it unlit.
+      return new Array(sourceWords.length).fill(undefined);
+    }
+  }, [sourceWords, timings]);
+
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
 
   useEffect(() => {
@@ -153,43 +170,48 @@ export const useSpokenText = (
   }, [debounced]);
 
   useEffect(() => {
-    if (!timings || !isPlaying) return;
-    const next = timings.findLastIndex(
-      (w) => w.start <= currentTime + LOOKAHEAD_SECONDS,
-    );
+    if (!isPlaying) return;
+    const next = tokenIndexAt(spans, currentTime + LOOKAHEAD_SECONDS);
     if (next !== -1) setCurrentWordIndex(next);
-  }, [timings, isPlaying, currentTime]);
+  }, [spans, isPlaying, currentTime]);
+
+  // The index always points at a rendered token, even if the text shrank out
+  // from under a stale highlight. Nothing may run off the end of the passage.
+  const activeIndex =
+    currentWordIndex >= 0 && currentWordIndex < sourceWords.length
+      ? currentWordIndex
+      : -1;
 
   const words = useMemo<DisplayWord[]>(
     () =>
       sourceWords.map((word, index) => {
-        const timing = timings?.[index];
+        const span = spans[index];
         return {
           text: word,
           index,
           state:
-            index === currentWordIndex
+            index === activeIndex
               ? "current"
-              : currentWordIndex >= 0 && index < currentWordIndex
+              : activeIndex >= 0 && index < activeIndex
                 ? "past"
                 : "future",
-          seekable: !!timing,
-          start: timing?.start,
-          end: timing?.end,
+          seekable: !!span,
+          start: span?.start,
+          end: span?.end,
         };
       }),
-    [sourceWords, timings, currentWordIndex],
+    [sourceWords, spans, activeIndex],
   );
 
-  const currentWord = currentWordIndex >= 0 ? words[currentWordIndex] : undefined;
+  const currentWord = activeIndex >= 0 ? words[activeIndex] : undefined;
 
   const changeRef = useRef(onWordChange);
   changeRef.current = onWordChange;
   useEffect(() => {
-    changeRef.current?.(currentWordIndex, currentWord);
+    changeRef.current?.(activeIndex, currentWord);
     // Fire on index changes only — not on every re-render of the word list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWordIndex]);
+  }, [activeIndex]);
 
   // ---------------------------------------------------------------- controls
 
@@ -219,13 +241,13 @@ export const useSpokenText = (
 
   const seekToWord = useCallback(
     (index: number) => {
-      const timing = timings?.[index];
-      if (!timing) return;
-      seek(timing.start);
+      const span = spans[index];
+      if (!span) return;
+      seek(span.start);
       setCurrentWordIndex(index);
       play();
     },
-    [timings, seek, play],
+    [spans, seek, play],
   );
 
   const getAudioElement = useCallback(() => audioRef.current, []);
@@ -249,7 +271,7 @@ export const useSpokenText = (
   return {
     text: source,
     words,
-    currentWordIndex,
+    currentWordIndex: activeIndex,
     currentWord,
     status,
     isLoading,

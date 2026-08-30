@@ -17,6 +17,8 @@ export { useSpokenText } from "./useSpokenText";
 
 export { createEndpointAligner, DEFAULT_ENDPOINT } from "./fetchAlignment";
 export { tokenize } from "./tokenize";
+export { alignTokens, normalizeForAlignment, tokenIndexAt } from "./align";
+export type { SpokenSpan } from "./align";
 
 export type {
   Alignment,
