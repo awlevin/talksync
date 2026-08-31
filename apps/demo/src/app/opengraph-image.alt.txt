@@ -1,1 +1,1 @@
-spoken-text — a React component that speaks your text and lights up each word as it is spoken.
+spoken-text — wrap your text, hear it read, watch every word light up.
