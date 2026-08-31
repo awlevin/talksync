@@ -27,13 +27,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 24.x
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
-      # Trusted publishing needs npm 11.5.1 or newer, which is ahead of the npm
-      # bundled with Node 22.
-      - run: npm install -g npm@latest
+      # Trusted publishing needs npm 11.5.1 or newer. Pinned rather than
+      # `@latest`: npm 12 requires a Node the runner may not have yet, so
+      # `@latest` silently starts failing the moment npm ships a major.
+      - run: npm install -g npm@11
 
       - run: pnpm install --frozen-lockfile
 
