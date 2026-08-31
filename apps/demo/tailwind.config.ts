@@ -1,46 +1,32 @@
 import type { Config } from "tailwindcss";
 
 const config = {
-  darkMode: ["class"],
+  darkMode: "media",
   content: ["./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border) / <alpha-value>)",
-        ring: "hsl(var(--ring) / <alpha-value>)",
-        background: "hsl(var(--background) / <alpha-value>)",
-        foreground: "hsl(var(--foreground) / <alpha-value>)",
-        muted: {
-          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
-          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
-          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
-        },
-        highlight: "hsl(var(--highlight) / <alpha-value>)",
-        destructive: "hsl(var(--destructive) / <alpha-value>)",
+        bg: "hsl(var(--bg) / <alpha-value>)",
+        panel: "hsl(var(--panel) / <alpha-value>)",
+        sunken: "hsl(var(--sunken) / <alpha-value>)",
+        ink: "hsl(var(--ink) / <alpha-value>)",
+        "ink-2": "hsl(var(--ink-2) / <alpha-value>)",
+        rule: "hsl(var(--rule) / <alpha-value>)",
+        rust: "hsl(var(--rust) / <alpha-value>)",
+        amber: "hsl(var(--amber) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
+        display: ["var(--font-display)", "Helvetica Neue", "Arial", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
-        mono: [
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "JetBrains Mono",
-          "monospace",
-        ],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 1px)",
-        sm: "calc(var(--radius) - 2px)",
+      maxWidth: {
+        page: "78rem",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 } satisfies Config;
 
 export default config;
