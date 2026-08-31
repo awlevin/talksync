@@ -1,9 +1,9 @@
 import type { SpokenWord } from "../types.js";
 
 /**
- * Real `whisper-1` output, captured from the deployed `/api/transcription`
- * route at https://talksync-six.vercel.app — the same `tts-1` -> `whisper-1`
- * round trip the app runs. Timings are verbatim; nothing here is invented.
+ * Real `whisper-1` output, captured from the demo's deployed
+ * `/api/transcription` route: the same `tts-1` -> `whisper-1` round trip the
+ * app runs. Timings are verbatim; nothing here is invented.
  */
 export type Fixture = {
   /** The text as it was typed, and as it is rendered. */

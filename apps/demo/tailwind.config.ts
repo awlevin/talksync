@@ -13,8 +13,8 @@ const config = {
         ink: "hsl(var(--ink) / <alpha-value>)",
         "ink-2": "hsl(var(--ink-2) / <alpha-value>)",
         rule: "hsl(var(--rule) / <alpha-value>)",
-        rust: "hsl(var(--rust) / <alpha-value>)",
-        amber: "hsl(var(--amber) / <alpha-value>)",
+        accent: "hsl(var(--accent) / <alpha-value>)",
+        lit: "hsl(var(--lit) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-display)", "Helvetica Neue", "Arial", "sans-serif"],

@@ -1,6 +1,6 @@
 # spoken-text demo
 
-The Next.js app behind [talksync-six.vercel.app](https://talksync-six.vercel.app).
+The Next.js app behind [spoken-text.vercel.app](https://spoken-text.vercel.app).
 It exists so that breaking the public API of `spoken-text` breaks a build:
 everything here imports from `spoken-text`, never from a relative path.
 

@@ -1,7 +1,7 @@
 /**
- * The package mark: a speech bubble of word-bars with one bar lit rust and
- * underlined amber. Drawn rather than imported so it takes the page's own
- * ink, rust and amber and works in either theme.
+ * The package mark: a speech bubble of word-bars with one bar lit. Drawn
+ * rather than imported so it takes the page's own ink, accent and lit colours
+ * and works in either theme.
  */
 export const Mark = ({ className }: { className?: string }) => (
   <svg
@@ -22,7 +22,21 @@ export const Mark = ({ className }: { className?: string }) => (
       <rect x="15.2" y="7.9" width="7.8" height="2.2" rx="1.1" />
       <rect x="17.4" y="11.9" width="5.6" height="2.2" rx="1.1" />
     </g>
-    <rect x="7" y="11.9" width="8.4" height="2.2" rx="1.1" fill="hsl(var(--rust))" />
-    <rect x="7" y="15.9" width="6.6" height="2.2" rx="1.1" fill="hsl(var(--amber))" />
+    <rect
+      x="7"
+      y="11.9"
+      width="8.4"
+      height="2.2"
+      rx="1.1"
+      fill="hsl(var(--accent))"
+    />
+    <rect
+      x="7"
+      y="15.9"
+      width="6.6"
+      height="2.2"
+      rx="1.1"
+      fill="hsl(var(--lit))"
+    />
   </svg>
 );

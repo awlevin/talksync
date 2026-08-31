@@ -11,14 +11,14 @@ const WORDS = HEADLINE.split(" ");
 
 /** The headline says what the package does, and then does it. */
 const Headline = () => (
-  <h1 className="display sweep text-[2.45rem] font-bold leading-[0.95] sm:text-[3.6rem] lg:text-[4.35rem]">
+  <h1 className="display sweep text-[2.35rem] font-bold leading-[0.98] sm:text-[3.4rem] lg:text-[4rem]">
     {WORDS.map((word, i) => {
       const stop = word.endsWith(".");
       return (
         <Fragment key={i}>
           <span style={{ animationDelay: `${0.3 + i * 0.15}s` }}>
             {stop ? word.slice(0, -1) : word}
-            {stop ? <span className="text-rust">.</span> : null}
+            {stop ? <span className="text-accent">.</span> : null}
           </span>
           {i < WORDS.length - 1 ? " " : null}
         </Fragment>
@@ -55,7 +55,7 @@ const Row = ({
 }) => (
   <div className="grid grid-cols-1 gap-x-6 gap-y-1 border-t border-rule py-3 sm:grid-cols-[minmax(0,10rem)_1fr]">
     <div className="min-w-0">
-      <div className="font-mono text-[0.8125rem] font-medium text-rust">
+      <div className="font-mono text-[0.8125rem] font-medium text-accent">
         {name}
       </div>
       <div className="font-mono text-[0.6875rem] leading-relaxed text-ink-2">
@@ -95,11 +95,11 @@ export default function HomePage() {
           </span>
         </div>
         <nav className="flex items-center gap-6">
-          <a className="label hidden hover:text-rust sm:inline" href="/example">
+          <a className="label hidden hover:text-accent sm:inline" href="/example">
             Minimal example
           </a>
           <a
-            className="label hover:text-rust"
+            className="label hover:text-accent"
             href={REPO}
             target="_blank"
             rel="noreferrer"
@@ -110,21 +110,28 @@ export default function HomePage() {
       </header>
 
       <main>
-        <section className="rise py-14 lg:py-20">
+        {/* The thing itself, before a word is said about it. */}
+        <section className="rise pb-14 pt-6 sm:pt-8 lg:pb-20">
+          <LiveExample />
+          <p className="mt-3 px-1 text-[0.875rem] leading-relaxed text-ink-2">
+            Press play, or click any word to hear the passage from there. Show
+            the code and edit the string to make it say something else.
+          </p>
+        </section>
+
+        <section className="pb-16 lg:pb-24">
           <Headline />
-          <p className="mt-7 max-w-[54ch] text-[1.0625rem] leading-[1.6] text-ink-2 sm:text-[1.1875rem]">
-            One React component reads a passage aloud and lights each word as it
-            is said. Bring any speech and transcription you like — the timings
-            are aligned to the tokens you actually render, and cached, so the
-            same passage is never generated twice.
+          <p className="mt-7 max-w-[80ch] text-[1.0625rem] leading-[1.6] text-ink-2 sm:text-[1.1875rem]">
+            One React component reads your text aloud and lights each word as it
+            is said.
           </p>
 
           <div className="mt-10 grid grid-cols-1 items-start gap-4 lg:mt-14 lg:grid-cols-[minmax(0,23rem)_1fr] lg:gap-6">
             <div className="flex flex-col gap-3">
               <InstallLine />
               <p className="px-1 text-[0.875rem] leading-relaxed text-ink-2">
-                React 18 or 19 is the only requirement. Everything else — the
-                speech, the transcript, the storage — is a function you pass in.
+                React 18 or 19 is the only requirement. The speech, the
+                transcript and the storage are all functions you pass in.
               </p>
             </div>
             <div className="panel overflow-hidden">
@@ -142,15 +149,6 @@ export default function HomePage() {
               </Code>
             </div>
           </div>
-        </section>
-
-        <section className="pb-16 lg:pb-24">
-          <SectionRule name="The component" file="client" />
-          <Lede>
-            Edit the string in the snippet and the passage beside it says the new
-            words. Click any word to hear the passage from there.
-          </Lede>
-          <LiveExample />
         </section>
 
         <section className="pb-16 lg:pb-24">
@@ -222,8 +220,8 @@ export default function HomePage() {
                 <dd className="text-ink-2">
                   The cache key is a hash of the passage, so identical text hits
                   the same entry. Without a cache the audio comes back inline as
-                  a <M>data:</M> URL — fine for a first run, wrong for anything
-                  else.
+                  a <M>data:</M> URL, which is fine for a first run and wrong
+                  for anything after it.
                 </dd>
               </div>
               <div className="border-t border-rule py-3.5">
@@ -319,7 +317,7 @@ export default function HomePage() {
                     {"<"}
                     <Api>SpokenText</Api>
                     {'\n  endpoint="/api/speech"'}
-                    {'\n  classNames={{ current: "bg-amber-200" }}'}
+                    {'\n  classNames={{ current: "bg-lime-300" }}'}
                     {"\n  onWordChange={(index, word) =>"}
                     {'\n    setCaption(word?.text ?? "")'}
                     {"\n  }"}
@@ -356,7 +354,7 @@ export default function HomePage() {
           <span className="label">MIT · Aaron Levin</span>
         </div>
         <a
-          className="label hover:text-rust"
+          className="label hover:text-accent"
           href={REPO}
           target="_blank"
           rel="noreferrer"

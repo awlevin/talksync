@@ -2,11 +2,11 @@
 
 # spoken-text
 
-_Wrap your text in one component, hear it read aloud, and watch each word light up as it is spoken._
+_One React component reads your text aloud and lights each word as it is said._
 
 ![spoken-text in action](https://raw.githubusercontent.com/awlevin/spoken-text/main/docs/demo.gif)
 
-Live demo at [talksync-six.vercel.app](https://talksync-six.vercel.app).
+Live demo at [spoken-text.vercel.app](https://spoken-text.vercel.app).
 
 ```bash
 npm install spoken-text
@@ -27,7 +27,7 @@ That is the whole thing. `SpokenText` sends the text to `/api/transcription`,
 gets back an audio file and word-level timestamps, and highlights each word at
 the moment it is spoken. Click any word to hear the passage from there.
 
-That route is yours to mount — one line, see
+That route is yours to mount. It is one line: see
 [Mounting the route](#mounting-the-route) below.
 
 If you want a play button and a scrubber, hold the controller yourself and put
@@ -47,23 +47,23 @@ function Reader({ text }: { text: string }) {
 }
 ```
 
-`useSpokenText` on its own is headless — it owns the audio and reports which
+`useSpokenText` on its own is headless. It owns the audio and reports which
 word is being spoken, so you can build whatever UI you like on top of it.
 
 ### `<SpokenText>`
 
 | Prop              | Type                                         | Default                | What it does                                                                           |
 | ----------------- | -------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------- |
-| `children`        | `string`                                     | —                      | The passage to speak. Required unless you pass `speech`.                                 |
-| `speech`          | `SpokenTextController`                       | —                      | A controller from `useSpokenText`, to share one passage with a `Transport`.              |
+| `children`        | `string`                                     |                        | The passage to speak. Required unless you pass `speech`.                                 |
+| `speech`          | `SpokenTextController`                       |                        | A controller from `useSpokenText`, to share one passage with a `Transport`.              |
 | `as`              | `"p" \| "div" \| "span" \| …`                 | `"p"`                  | Element the passage renders into.                                                        |
-| `className`       | `string`                                     | —                      | Class on that element.                                                                   |
-| `classNames`      | `{ word, past, current, future }`            | —                      | Per-word classes. Setting one drops the built-in look for that slot, so your CSS wins.   |
-| `renderWord`      | `(word: DisplayWord) => ReactNode`           | —                      | Render words yourself. Whitespace is still inserted for you.                             |
+| `className`       | `string`                                     |                        | Class on that element.                                                                   |
+| `classNames`      | `{ word, past, current, future }`            |                        | Per-word classes. Setting one drops the built-in look for that slot, so your CSS wins.   |
+| `renderWord`      | `(word: DisplayWord) => ReactNode`           |                        | Render words yourself. Whitespace is still inserted for you.                             |
 | `seekOnWordClick` | `boolean`                                    | `true`                 | Click a word to play from there.                                                         |
 | `endpoint`        | `string`                                     | `"/api/transcription"` | Route that turns text into audio and timings.                                            |
-| `fetchAlignment`  | `(text: string) => Promise<Alignment>`       | —                      | Skip `endpoint` and resolve the alignment however you like.                              |
-| `onWordChange`    | `(index: number, word?: DisplayWord) => void` | —                      | Fires when the spoken word changes. `-1` means nothing is spoken yet.                    |
+| `fetchAlignment`  | `(text: string) => Promise<Alignment>`       |                        | Skip `endpoint` and resolve the alignment however you like.                              |
+| `onWordChange`    | `(index: number, word?: DisplayWord) => void` |                        | Fires when the spoken word changes. `-1` means nothing is spoken yet.                    |
 | `debounceMs`      | `number`                                     | `0`                    | Wait this long after `children` stops changing before fetching. Useful behind a textarea. |
 | `autoPlay`        | `boolean`                                    | `false`                | Start speaking as soon as the audio is ready.                                            |
 
@@ -74,9 +74,9 @@ Every word also carries `data-spoken-state="past" | "current" | "future"` and
 
 | Prop         | Type                                                    | Default | What it does                                  |
 | ------------ | ------------------------------------------------------- | ------- | --------------------------------------------- |
-| `speech`     | `SpokenTextController`                                  | —       | Required. The controller to drive.             |
-| `className`  | `string`                                                | —       | Class on the wrapper.                          |
-| `classNames` | `{ root, button, track, elapsed, thumb, time, status }` | —       | Per-part classes, same "your class wins" rule. |
+| `speech`     | `SpokenTextController`                                  |         | Required. The controller to drive.             |
+| `className`  | `string`                                                |         | Class on the wrapper.                          |
+| `classNames` | `{ root, button, track, elapsed, thumb, time, status }` |         | Per-part classes, same "your class wins" rule. |
 | `showTime`   | `boolean`                                               | `true`  | Show elapsed / total time.                     |
 | `showStatus` | `boolean`                                               | `true`  | Show the loading and error line.               |
 
@@ -88,7 +88,7 @@ off. It returns:
 
 | Field                                       | What it is                                                          |
 | ------------------------------------------- | ------------------------------------------------------------------- |
-| `words`                                     | `DisplayWord[]` — text, index, `past \| current \| future`, timings  |
+| `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings   |
 | `currentWordIndex`, `currentWord`           | The word being spoken, or `-1` / `undefined`                         |
 | `status`, `isLoading`, `isPlaying`, `error` | What it is doing right now                                           |
 | `currentTime`, `duration`, `audioUrl`       | Playback position and source                                         |
@@ -121,7 +121,7 @@ export const POST = createAlignmentHandler({
 ```
 
 `createAlignmentHandler` returns a plain `(Request) => Promise<Response>`, so it
-mounts in a Next.js route handler, a Hono route, a Deno server — anywhere the
+mounts in a Next.js route handler, a Hono route, a Deno server: anywhere the
 web standard is spoken.
 
 ### The three adapters are optional
@@ -162,8 +162,8 @@ export const POST = createAlignmentHandler({
 ```
 
 Other options: `maxLength` (default `2000` characters), `hash` (default SHA-256
-of the passage — override it to fold the voice or model into the key) and
-`onError`.
+of the passage, which you can override to fold the voice or model into the key)
+and `onError`.
 
 ## How the audio is made and cached
 
@@ -182,7 +182,7 @@ sharing a passage share one request, and remounting one resolves from memory.
 
 The cache is content-addressed and never invalidated, which is fine because the
 key covers the entire input. Change a comma and you get a new hash and a new
-recording. Change the *voice*, though, and the key does not move on its own —
+recording. Change the *voice*, though, and the key does not move on its own, so
 pass a `hash` that includes it if you switch voices at runtime.
 
 Leave `cache` out entirely and every request regenerates the audio and returns it
@@ -217,7 +217,7 @@ When the two disagree it looks a short way ahead on both sides for the next plac
 they agree and carries on from there, so a word Whisper drops or invents costs
 you that one word rather than the rest of the passage. A span is only ever
 assigned on an exact match, so a token that cannot be placed comes back untimed
-— unhighlighted and not clickable — rather than wrong. The highlight index is
+(unhighlighted and not clickable) rather than wrong. The highlight index is
 always an index into the rendered passage, so it cannot run off the end.
 
 The test suite works from real `whisper-1` output captured from the deployed
@@ -228,8 +228,8 @@ route.
 **Words respoken as different words are not matched.** The alignment compares
 letters and digits, so it only works when the transcriber spells a token the way
 you did. If the speech model reads something aloud and the transcriber writes it
-back differently — a symbol read as a word, a unit expanded, a number
-transcribed as `twelve hundred` rather than `1,200` — that token stays untimed
+back differently (a symbol read as a word, a unit expanded, a number
+transcribed as `twelve hundred` rather than `1,200`), that token stays untimed
 and the highlight steps over it, picking back up at the next word the two agree
 on. In practice `tts-1` and `whisper-1` agree on ordinary English text, including
 the money, dates, abbreviations and hyphenated compounds in the table above.
@@ -256,7 +256,7 @@ cache miss because both model calls run before anything plays.
 | Path                    | What it is                                    |
 | ----------------------- | --------------------------------------------- |
 | `packages/spoken-text/` | The published package                          |
-| `apps/demo/`            | The Next.js demo at `talksync-six.vercel.app`  |
+| `apps/demo/`            | The Next.js demo site                          |
 
 The demo depends on the workspace package and imports from `spoken-text`, never
 from a relative path, so breaking the public API breaks its build.

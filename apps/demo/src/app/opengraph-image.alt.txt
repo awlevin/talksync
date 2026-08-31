@@ -1,1 +1,1 @@
-spoken-text — wrap your text, hear it read, watch every word light up.
+spoken-text: wrap your text, hear it read, watch every word light up.

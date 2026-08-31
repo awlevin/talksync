@@ -3,53 +3,55 @@
 @tailwind utilities;
 
 /*
- * The palette comes off the package mark: grey word-bars in a speech bubble
- * with one bar lit rust and underlined amber. So the page keeps exactly two
- * saturated colours — amber for "being said", rust for the mark under it —
- * and spends every other surface on a cool structural neutral, the grey of a
- * console chassis. Anything the page wants to emphasise is lit the same way a
- * spoken word is.
+ * One colour, two strengths.
+ *
+ * Green is what a mixing desk lights when signal is passing, so it is what a
+ * word is lit with here: `--lit` is the signal lime the spoken word sits in,
+ * and `--accent` is the deeper green under it, on the package's own names, and
+ * on anything the page wants to point at. Every other surface is a cool slate,
+ * the grey of a console chassis, so the only colour on the page is the colour
+ * that means "this is being said right now".
  */
 @layer base {
   :root {
     color-scheme: light;
 
-    --bg: 165 12% 92%;
-    --panel: 160 24% 97%;
-    --sunken: 165 12% 89%;
+    --bg: 210 16% 93%;
+    --panel: 210 30% 98%;
+    --sunken: 210 14% 90%;
 
-    --ink: 200 26% 14%;
-    --ink-2: 198 10% 40%;
-    --rule: 168 11% 83%;
+    --ink: 212 30% 13%;
+    --ink-2: 212 10% 40%;
+    --rule: 212 13% 84%;
 
-    --rust: 16 72% 40%;
-    --amber: 38 82% 66%;
+    --accent: 158 70% 28%;
+    --lit: 84 76% 62%;
 
     /* What `<SpokenText>` reads for its built-in highlight. */
-    --spoken-text-past: hsl(38 82% 66% / 0.38);
-    --spoken-text-current: hsl(38 82% 66%);
-    --spoken-text-accent: hsl(16 72% 40%);
+    --spoken-text-past: hsl(84 76% 62% / 0.34);
+    --spoken-text-current: hsl(84 76% 62%);
+    --spoken-text-accent: hsl(158 70% 28%);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
 
-      --bg: 200 20% 8%;
-      --panel: 200 16% 12%;
-      --sunken: 200 18% 10%;
+      --bg: 212 24% 8%;
+      --panel: 212 18% 12%;
+      --sunken: 212 20% 10%;
 
-      --ink: 160 12% 91%;
-      --ink-2: 195 8% 57%;
-      --rule: 200 12% 20%;
+      --ink: 205 14% 92%;
+      --ink-2: 208 9% 58%;
+      --rule: 210 13% 21%;
 
-      --rust: 19 76% 62%;
-      --amber: 38 76% 64%;
+      --accent: 152 52% 52%;
+      --lit: 84 70% 62%;
 
       /* Light text sits on these, so the lit word is a wash, not a block. */
-      --spoken-text-past: hsl(19 76% 62% / 0.17);
-      --spoken-text-current: hsl(19 76% 62% / 0.44);
-      --spoken-text-accent: hsl(38 76% 64%);
+      --spoken-text-past: hsl(84 70% 62% / 0.16);
+      --spoken-text-current: hsl(84 70% 62% / 0.38);
+      --spoken-text-accent: hsl(84 70% 62%);
     }
   }
 }
@@ -67,22 +69,21 @@
     font-feature-settings: "kern", "liga", "calt";
   }
   ::selection {
-    background: hsl(var(--amber) / 0.85);
-    color: hsl(200 26% 14%);
+    background: hsl(var(--lit) / 0.85);
+    color: hsl(212 30% 13%);
   }
   :focus-visible {
-    outline: 2px solid hsl(var(--rust));
+    outline: 2px solid hsl(var(--accent));
     outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Archivo carries the display voice. Widened, heavy and tightly set, it
-     reads like the silkscreen legend on a piece of studio hardware. */
+  /* Space Grotesk carries the display voice: the proportional cut of a
+     monospace, so it sounds mechanical without being widened to say so. */
   .display {
     font-family: var(--font-display), "Helvetica Neue", Arial, sans-serif;
-    font-variation-settings: "wdth" 120;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.025em;
   }
 
   /* File paths and code identifiers keep the case they are actually written
@@ -126,6 +127,38 @@
     border-radius: 5px;
   }
 
+  /* The demo's view switch. The chosen segment is lit the way a spoken word
+     is, so the control explains itself. */
+  .seg {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid hsl(var(--rule));
+    border-radius: 999px;
+    background: hsl(var(--sunken));
+  }
+  .seg > button {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    color: hsl(var(--ink-2));
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .seg > button:hover {
+    color: hsl(var(--ink));
+  }
+  .seg > button[aria-pressed="true"] {
+    background: hsl(var(--lit));
+    color: hsl(212 30% 13%);
+  }
+
   .code {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.75rem;
@@ -142,7 +175,7 @@
   }
   /* The package's own names are the only thing in a snippet worth colouring. */
   .tok-api {
-    color: hsl(var(--rust));
+    color: hsl(var(--accent));
   }
 }
 
@@ -169,8 +202,9 @@
   }
   1.6%,
   4.4% {
-    background-color: hsl(var(--amber) / 0.55);
-    box-shadow: inset 0 -0.1em 0 hsl(var(--rust));
+    /* The same two tokens `<SpokenText>` lights a real word with. */
+    background-color: var(--spoken-text-current);
+    box-shadow: inset 0 -0.1em 0 var(--spoken-text-accent);
   }
 }
 

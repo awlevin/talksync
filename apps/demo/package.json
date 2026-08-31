@@ -2,7 +2,7 @@
   "name": "demo",
   "version": "0.0.0",
   "private": true,
-  "description": "The spoken-text demo at https://talksync-six.vercel.app.",
+  "description": "The spoken-text demo site.",
   "scripts": {
     "dev": "pnpm --filter spoken-text build && next dev",
     "build": "pnpm --filter spoken-text build && next build",
