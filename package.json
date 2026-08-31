@@ -1,40 +1,24 @@
 {
-  "name": "talksync",
-  "version": "0.1.0",
+  "name": "spoken-text-repo",
+  "version": "0.0.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "component": "npx shadcn-ui@latest add",
-    "test": "vitest run",
-    "test:watch": "vitest"
+  "description": "Monorepo for the spoken-text package and its demo.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=20"
   },
-  "dependencies": {
-    "@ai-sdk/openai": "^3.0.54",
-    "@vercel/blob": "^2.3.3",
-    "ai": "^6.0.170",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.390.0",
-    "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "swr": "^2.2.5",
-    "tailwind-merge": "^2.3.0",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.4.1"
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter demo dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm --filter spoken-text build && pnpm -r typecheck",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "release": "pnpm --filter spoken-text build && changeset publish"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.3",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5",
-    "vitest": "^3.2.7"
+    "@changesets/cli": "^3.0.1"
   }
 }

@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - apps/*
+
+# esbuild (tsup) and unrs-resolver (eslint) ship native binaries that their
+# install scripts fetch. pnpm 10 blocks build scripts unless they are listed.
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver

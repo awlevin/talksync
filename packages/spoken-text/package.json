@@ -1,0 +1,96 @@
+{
+  "name": "spoken-text",
+  "version": "0.1.0",
+  "description": "Wrap text in one React component, hear it read aloud, and watch each word light up as it is spoken.",
+  "keywords": [
+    "react",
+    "text-to-speech",
+    "tts",
+    "read-aloud",
+    "karaoke",
+    "word-timings",
+    "highlight",
+    "forced-alignment",
+    "whisper",
+    "accessibility"
+  ],
+  "license": "MIT",
+  "author": "Aaron Levin",
+  "homepage": "https://github.com/awlevin/spoken-text#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awlevin/spoken-text.git",
+    "directory": "packages/spoken-text"
+  },
+  "bugs": {
+    "url": "https://github.com/awlevin/spoken-text/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepack": "cp ../../README.md ./README.md && cp ../../LICENSE ./LICENSE"
+  },
+  "peerDependencies": {
+    "@ai-sdk/openai": ">=3",
+    "@vercel/blob": ">=2",
+    "ai": ">=6",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "@vercel/blob": {
+      "optional": true
+    },
+    "ai": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ai-sdk/openai": "^3.0.54",
+    "@types/react": "^18.3.12",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vercel/blob": "^2.3.3",
+    "ai": "^6.0.170",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "react": "^18.3.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.7"
+  }
+}

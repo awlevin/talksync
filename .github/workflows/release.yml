@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  # Lets the job mint the OIDC token npm trusted publishing authenticates with.
+  # There is no NPM_TOKEN secret, and there must not be one.
+  id-token: write
+
+jobs:
+  release:
+    name: version PR or publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      # Trusted publishing needs npm 11.5.1 or newer, which is ahead of the npm
+      # bundled with Node 22.
+      - run: npm install -g npm@latest
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Opens (or updates) a "Version Packages" PR while changesets are pending.
+      # Once that PR is merged there are none left, so this publishes instead.
+      #
+      # npm cannot register a trusted publisher for a package that does not
+      # exist yet, so the first `spoken-text` release is published by hand and
+      # this step fails until that has happened. See the README.
+      - uses: changesets/action@v1
+        with:
+          version: pnpm changeset:version
+          publish: pnpm release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
