@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /**
  * Snippets are hand-set rather than run through a highlighter, and they carry
  * only two colours: everything structural is dimmed, and the names that come
- * out of this package take the accent green, the colour the mark lights a bar
+ * out of this package take the accent blue, the colour the mark lights a bar
  * in and the colour a spoken word sits in.
  */
 

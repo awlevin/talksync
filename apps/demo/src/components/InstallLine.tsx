@@ -23,7 +23,7 @@ export const InstallLine = () => {
           () => setCopied(false),
         );
       }}
-      className="panel group flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:border-rust/50"
+      className="panel group flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:border-accent/40"
     >
       <span aria-hidden className="font-mono text-sm text-ink-2">
         $
@@ -31,7 +31,7 @@ export const InstallLine = () => {
       <span className="font-mono text-sm font-medium text-ink sm:text-[0.9375rem]">
         {COMMAND}
       </span>
-      <span className="label ml-auto shrink-0 group-hover:text-rust">
+      <span className="label ml-auto shrink-0 group-hover:text-accent">
         {copied ? "Copied" : "Copy"}
       </span>
     </button>

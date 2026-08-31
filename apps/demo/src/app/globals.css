@@ -5,53 +5,52 @@
 /*
  * One colour, two strengths.
  *
- * Green is what a mixing desk lights when signal is passing, so it is what a
- * word is lit with here: `--lit` is the signal lime the spoken word sits in,
- * and `--accent` is the deeper green under it, on the package's own names, and
- * on anything the page wants to point at. Every other surface is a cool slate,
- * the grey of a console chassis, so the only colour on the page is the colour
- * that means "this is being said right now".
+ * A pastel blue is what the page is lit with. `--lit` is the soft sky the
+ * spoken word sits in, and `--accent` is the same hue at reading strength: the
+ * rule under a lit word, the package's own names, and anything the page wants
+ * to point at. Every other surface is a cool blue-grey paper, so the only
+ * colour on the page is the colour that means "this is being said right now".
  */
 @layer base {
   :root {
     color-scheme: light;
 
-    --bg: 210 16% 93%;
-    --panel: 210 30% 98%;
-    --sunken: 210 14% 90%;
+    --bg: 207 27% 94%;
+    --panel: 205 42% 98%;
+    --sunken: 207 25% 90%;
 
-    --ink: 212 30% 13%;
-    --ink-2: 212 10% 40%;
-    --rule: 212 13% 84%;
+    --ink: 213 33% 14%;
+    --ink-2: 212 14% 40%;
+    --rule: 209 21% 84%;
 
-    --accent: 158 70% 28%;
-    --lit: 84 76% 62%;
+    --accent: 209 68% 37%;
+    --lit: 202 84% 70%;
 
     /* What `<SpokenText>` reads for its built-in highlight. */
-    --spoken-text-past: hsl(84 76% 62% / 0.34);
-    --spoken-text-current: hsl(84 76% 62%);
-    --spoken-text-accent: hsl(158 70% 28%);
+    --spoken-text-past: hsl(202 84% 70% / 0.42);
+    --spoken-text-current: hsl(202 84% 70%);
+    --spoken-text-accent: hsl(209 68% 37%);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
 
-      --bg: 212 24% 8%;
-      --panel: 212 18% 12%;
-      --sunken: 212 20% 10%;
+      --bg: 213 27% 8%;
+      --panel: 213 21% 12%;
+      --sunken: 213 23% 10%;
 
-      --ink: 205 14% 92%;
-      --ink-2: 208 9% 58%;
-      --rule: 210 13% 21%;
+      --ink: 205 17% 92%;
+      --ink-2: 208 12% 58%;
+      --rule: 210 15% 22%;
 
-      --accent: 152 52% 52%;
-      --lit: 84 70% 62%;
+      --accent: 203 86% 74%;
+      --lit: 200 78% 62%;
 
       /* Light text sits on these, so the lit word is a wash, not a block. */
-      --spoken-text-past: hsl(84 70% 62% / 0.16);
-      --spoken-text-current: hsl(84 70% 62% / 0.38);
-      --spoken-text-accent: hsl(84 70% 62%);
+      --spoken-text-past: hsl(200 78% 62% / 0.16);
+      --spoken-text-current: hsl(200 78% 62% / 0.40);
+      --spoken-text-accent: hsl(203 86% 74%);
     }
   }
 }
@@ -69,8 +68,8 @@
     font-feature-settings: "kern", "liga", "calt";
   }
   ::selection {
-    background: hsl(var(--lit) / 0.85);
-    color: hsl(212 30% 13%);
+    background: hsl(var(--lit) / 0.9);
+    color: hsl(213 33% 14%);
   }
   :focus-visible {
     outline: 2px solid hsl(var(--accent));
@@ -156,7 +155,7 @@
   }
   .seg > button[aria-pressed="true"] {
     background: hsl(var(--lit));
-    color: hsl(212 30% 13%);
+    color: hsl(213 33% 14%);
   }
 
   .code {

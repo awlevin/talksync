@@ -190,7 +190,7 @@ export const Transport = ({
           style={classNames?.status ? undefined : S.status}
         >
           {error ? (
-            `Failed to compose audio — ${error.message}`
+            `Failed to compose audio: ${error.message}`
           ) : (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
               <style>{PULSE_KEYFRAMES}</style>

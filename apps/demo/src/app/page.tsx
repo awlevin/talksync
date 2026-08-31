@@ -110,8 +110,17 @@ export default function HomePage() {
       </header>
 
       <main>
-        {/* The thing itself, before a word is said about it. */}
-        <section className="rise pb-14 pt-6 sm:pt-8 lg:pb-20">
+        {/* What it is, said once. */}
+        <section className="pt-10 sm:pt-14 lg:pt-16">
+          <Headline />
+          <p className="mt-7 max-w-[80ch] text-[1.0625rem] leading-[1.6] text-ink-2 sm:text-[1.1875rem]">
+            One React component reads your text aloud and lights each word as it
+            is said.
+          </p>
+        </section>
+
+        {/* Then the thing itself. */}
+        <section className="rise pb-16 pt-10 sm:pt-12 lg:pb-24 lg:pt-14">
           <LiveExample />
           <p className="mt-3 px-1 text-[0.875rem] leading-relaxed text-ink-2">
             Press play, or click any word to hear the passage from there. Show
@@ -120,13 +129,7 @@ export default function HomePage() {
         </section>
 
         <section className="pb-16 lg:pb-24">
-          <Headline />
-          <p className="mt-7 max-w-[80ch] text-[1.0625rem] leading-[1.6] text-ink-2 sm:text-[1.1875rem]">
-            One React component reads your text aloud and lights each word as it
-            is said.
-          </p>
-
-          <div className="mt-10 grid grid-cols-1 items-start gap-4 lg:mt-14 lg:grid-cols-[minmax(0,23rem)_1fr] lg:gap-6">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,23rem)_1fr] lg:gap-6">
             <div className="flex flex-col gap-3">
               <InstallLine />
               <p className="px-1 text-[0.875rem] leading-relaxed text-ink-2">
@@ -317,7 +320,7 @@ export default function HomePage() {
                     {"<"}
                     <Api>SpokenText</Api>
                     {'\n  endpoint="/api/speech"'}
-                    {'\n  classNames={{ current: "bg-lime-300" }}'}
+                    {'\n  classNames={{ current: "bg-sky-200" }}'}
                     {"\n  onWordChange={(index, word) =>"}
                     {'\n    setCaption(word?.text ?? "")'}
                     {"\n  }"}
