@@ -182,10 +182,15 @@
     background-color: var(--spoken-text-current);
     box-shadow: inset 0 -0.12em 0 var(--spoken-text-accent);
   }
-  /* A name inside a spoken passage still reads as a name. */
+  /* A name inside a spoken passage still reads as a name. The smaller mono box
+     is shorter than the serif one it sits among, so a highlight running across
+     the two would step up and down. Padding an inline box vertically paints
+     without moving the line, so the band comes out level. */
   .tw-code {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.8125rem;
+    padding-top: 0.385em;
+    padding-bottom: 0.077em;
   }
   /* The one moment the passage is not silent about itself: audio is coming. */
   .tw-waiting {

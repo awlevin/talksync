@@ -202,6 +202,24 @@ export const Talkable = ({
     setPending(null);
   }, [status]);
 
+  // A passage that has finished, or that has been silenced by another one,
+  // puts its highlight away. Otherwise every passage the reader has visited
+  // keeps a lit word, and the page ends up covered in them. Coming back is
+  // free: the alignment is already in the package's cache, so re-arming
+  // resolves from memory without going near the network.
+  const spoke = useRef(false);
+  const { isPlaying } = speech;
+  useEffect(() => {
+    if (isPlaying) {
+      spoke.current = true;
+      return;
+    }
+    if (!spoke.current) return;
+    spoke.current = false;
+    setArmed(false);
+    setPending(null);
+  }, [isPlaying]);
+
   const controller = useMemo<SpokenTextController>(
     () => ({
       ...speech,
@@ -213,7 +231,7 @@ export const Talkable = ({
 
   const codeWords = useMemo(() => new Set(code ?? []), [code]);
 
-  const root = [className, pending != null ? "tw-waiting" : undefined]
+  const root = ["talkable", className, pending != null ? "tw-waiting" : undefined]
     .filter(Boolean)
     .join(" ");
 
@@ -231,6 +249,8 @@ export const Talkable = ({
               ? `${STATE_CLASS[word.state]} tw-code`
               : STATE_CLASS[word.state]
           }
+          data-spoken-state={word.state}
+          data-spoken-index={word.index}
           onClick={() => speak(word.index)}
         >
           {word.text}
