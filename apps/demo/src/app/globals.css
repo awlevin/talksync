@@ -158,6 +158,42 @@
     color: hsl(213 33% 14%);
   }
 
+  /* Every block of prose on the page can be spoken, and the affordance stays
+     out of the way: the text reads as text until the cursor is on a word. */
+  .tw {
+    border-radius: 2px;
+    margin: 0 -0.1em;
+    padding: 0 0.1em;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  /* Touch has no hover, and a sticky highlight there would read as a bug. */
+  @media (hover: hover) {
+    .tw:hover {
+      background-color: hsl(var(--lit) / 0.32);
+    }
+  }
+  .tw-past {
+    background-color: var(--spoken-text-past);
+  }
+  .tw-current {
+    background-color: var(--spoken-text-current);
+    box-shadow: inset 0 -0.12em 0 var(--spoken-text-accent);
+  }
+  /* A name inside a spoken passage still reads as a name. */
+  .tw-code {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.8125rem;
+  }
+  /* The one moment the passage is not silent about itself: audio is coming. */
+  .tw-waiting {
+    text-decoration: underline dotted hsl(var(--accent) / 0.55);
+    text-underline-offset: 0.28em;
+    animation: tw-breathe 1.3s ease-in-out infinite;
+  }
+
   .code {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.75rem;
@@ -207,6 +243,12 @@
   }
 }
 
+@keyframes tw-breathe {
+  50% {
+    text-decoration-color: hsl(var(--accent) / 0.12);
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -220,7 +262,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sweep > span,
-  .rise {
+  .rise,
+  .tw-waiting {
     animation: none !important;
   }
 }

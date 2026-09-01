@@ -3,6 +3,7 @@
 import { useState, type ClipboardEvent, type KeyboardEvent } from "react";
 import { SpokenText, Transport, useSpokenText } from "spoken-text";
 import { Api, Code, Dim } from "./code";
+import { useSoleSpeaker } from "./Talkable";
 
 const SAMPLE =
   "The tide came in slowly that morning, and the boats leaned over in the mud until the water found them again. By noon the harbour was full, and nobody could remember what the bottom looked like.";
@@ -46,11 +47,16 @@ const ViewSwitch = ({
  *
  * What is printed is exactly what is running: no styling props, because the
  * page sets `--spoken-text-current` and friends and the component reads them.
+ *
+ * The only thing the page adds is a place in the queue: the demo takes the
+ * page's voice when it starts, and gives it up when a passage below is asked
+ * to speak.
  */
 export const LiveExample = () => {
   const [view, setView] = useState<View>("player");
   const [text, setText] = useState(SAMPLE);
   const speech = useSpokenText(text, { debounceMs: 900 });
+  useSoleSpeaker(speech);
 
   const showCode = view !== "player";
   const showPlayer = view !== "code";
