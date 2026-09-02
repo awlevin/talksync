@@ -1,7 +1,7 @@
 import type { SVGProps } from "react";
 
 /**
- * The two glyphs `Transport` needs, drawn inline. A play triangle and a pause
+ * The two glyphs `Player` needs, drawn inline. A play triangle and a pause
  * bar are not worth an icon dependency in a consumer's bundle, so the paths
  * are copied here (from Lucide, ISC licensed) rather than imported.
  */
