@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ClipboardEvent, type KeyboardEvent } from "react";
-import { SpokenText, Transport, useSpokenText } from "spoken-text";
+import { Player, SpokenText, useSpokenText } from "spoken-text";
 import { Api, Code, Dim } from "./code";
 import { useSoleSpeaker } from "./Talkable";
 
@@ -91,9 +91,9 @@ export const LiveExample = () => {
           <Code>
             <Dim>{"import "}</Dim>
             {"{ "}
-            <Api>SpokenText</Api>
+            <Api>Player</Api>
             {", "}
-            <Api>Transport</Api>
+            <Api>SpokenText</Api>
             {", "}
             <Api>useSpokenText</Api>
             {" } "}
@@ -135,7 +135,7 @@ export const LiveExample = () => {
             <Api>SpokenText</Api>
             {" speech={speech} />"}
             {"\n      <"}
-            <Api>Transport</Api>
+            <Api>Player</Api>
             {" speech={speech} />"}
             {"\n    </>"}
             {"\n  );"}
@@ -161,7 +161,7 @@ export const LiveExample = () => {
           >
             <SpokenText speech={speech} />
             <div className="mt-auto border-t border-rule pb-5 pt-5 font-mono lg:pb-6">
-              <Transport speech={speech} />
+              <Player speech={speech} />
             </div>
           </div>
         </div>
