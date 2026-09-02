@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useContext, useRef, useState, type CSSProperties } from "react";
 import { PauseIcon, PlayIcon } from "./icons.js";
+import { SpokenTextContext } from "./SpokenTextProvider.js";
 import type { SpokenTextController } from "./types.js";
 
-export type TransportClassNames = {
+export type PlayerClassNames = {
   root?: string;
   button?: string;
   track?: string;
@@ -16,15 +17,15 @@ export type TransportClassNames = {
   status?: string;
 };
 
-export type TransportProps = {
-  /** The controller returned by `useSpokenText`. */
-  speech: SpokenTextController;
+export type PlayerProps = {
+  /** The controller to drive. Read from `<SpokenTextProvider>` when left out. */
+  speech?: SpokenTextController;
   className?: string;
   /**
    * Per-part classes. Supplying one replaces the built-in look for that part,
    * so your own CSS is not fighting inline styles.
    */
-  classNames?: TransportClassNames;
+  classNames?: PlayerClassNames;
   /** Show elapsed / total time. Default `true`. */
   showTime?: boolean;
   /** Show the loading and error line. Default `true`. */
@@ -68,25 +69,40 @@ const S = {
   },
   time: { whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", fontSize: "0.625rem", letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.6 },
   status: { fontSize: "0.625rem", letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.6 },
+  /** The total is a guess until every block has loaded, so it is said quietly. */
+  estimate: { opacity: 0.55 },
 } satisfies Record<string, CSSProperties>;
 
 /**
- * A play button and a scrubber for a `useSpokenText` controller. Optional —
- * `<SpokenText>` highlights fine on its own.
+ * A play button and a scrubber for one document. Optional — `<SpokenText>`
+ * highlights fine on its own.
+ *
+ * With no `speech` prop it drives the nearest `<SpokenTextProvider>`, so it can
+ * sit in a sticky header rather than next to the text.
  */
-export const Transport = ({
-  speech,
+export const Player = ({
+  speech: given,
   className,
   classNames,
   showTime = true,
   showStatus = true,
-}: TransportProps) => {
+}: PlayerProps) => {
+  const context = useContext(SpokenTextContext);
   const trackRef = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
 
+  const speech = given ?? context?.controller;
+  if (!speech) {
+    throw new Error(
+      "<Player> needs a `speech` controller, or a <SpokenTextProvider> above it.",
+    );
+  }
+
   const { currentTime, duration, isPlaying, isLoading, error } = speech;
   const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
-  const ready = !!speech.audioUrl;
+  // Anything with words in it can be pressed: blocks are fetched as they are
+  // reached, so play means "start it", not "start what has already arrived".
+  const ready = speech.words.length > 0;
 
   const seekFrom = (clientX: number) => {
     const el = trackRef.current;
@@ -178,7 +194,17 @@ export const Transport = ({
             >
               {formatTime(currentTime)}
               <span style={{ margin: "0 0.375rem", opacity: 0.5 }}>/</span>
-              {formatTime(duration)}
+              <span
+                style={speech.durationIsEstimate ? S.estimate : undefined}
+                title={
+                  speech.durationIsEstimate
+                    ? "Estimated until every block has loaded"
+                    : undefined
+                }
+              >
+                {speech.durationIsEstimate ? "~" : ""}
+                {formatTime(duration)}
+              </span>
             </div>
           )}
         </div>
