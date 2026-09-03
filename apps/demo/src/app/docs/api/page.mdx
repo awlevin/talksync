@@ -1,0 +1,239 @@
+export const metadata = {
+  title: "Reference · spoken-text",
+  description:
+    "Every prop on <SpokenText>, <Player> and <SpokenTextProvider>, every field on the controller, and everything the package exports.",
+};
+
+import { Prop, Props } from "@/components/Props";
+
+# Reference
+
+Everything the package exports, and nothing it does not. Where a page has more
+to say about one of these, it is linked from the row.
+
+## `<SpokenText>`
+
+<Props data-spoken-skip>
+  <Prop name="children" type="string | ReactNode">
+    A passage, or a tree of elements. Each block becomes its own alignment
+    request. [Reading a whole document](/docs/documents).
+  </Prop>
+  <Prop name="speech" type="SpokenTextController">
+    A controller from `useSpokenText`. Left out, it reads a provider, or else
+    manages itself.
+  </Prop>
+  <Prop name="skip" type="(string | ((el) => boolean))[] = DEFAULT_SKIP">
+    Parts of the tree to leave unspoken. They still render.
+  </Prop>
+  <Prop name="only" type="(string | ((el) => boolean))[]">
+    Speak only these parts of the tree. Unset means all of it.
+  </Prop>
+  <Prop name="say" type="Record<string, (info) => string | { before, after } | null>">
+    Say something the page does not write, keyed by selector. First match wins,
+    and the words are spoken but never rendered. [Saying what is not on the
+    page](/docs/documents).
+  </Prop>
+  <Prop name="as" type={`"p" | "div" | "span" | … = "div" / "p"`}>
+    Element it renders into: `div` for a tree, `p` for a string.
+  </Prop>
+  <Prop name="className" type="string">
+    Class on that element.
+  </Prop>
+  <Prop name="classNames" type="{ word, past, current, future, separator }">
+    Classes for the words and for the gaps between them. Setting one drops the
+    built-in look for that slot, so your CSS wins. [Styling the
+    highlight](/docs/styling).
+  </Prop>
+  <Prop name="renderWord" type="(word: DisplayWord) => ReactNode">
+    Render words yourself. Whitespace is still inserted for you.
+  </Prop>
+  <Prop name="seekOnWordClick" type="boolean = true">
+    Click a word to play from there, fetching its block if it has not been
+    asked for.
+  </Prop>
+  <Prop name="endpoint" type={`string = "/api/transcription"`}>
+    Route that turns text into audio and timings.
+  </Prop>
+  <Prop name="fetchAlignment" type="(text, { kind }) => Promise<Alignment>">
+    Skip `endpoint` and resolve the alignment however you like.
+  </Prop>
+  <Prop name="onWordChange" type="(index: number, word?: DisplayWord) => void">
+    Fires when the spoken word changes. `-1` means nothing is spoken yet.
+  </Prop>
+  <Prop name="debounceMs" type="number = 0">
+    Wait this long after `children` stops changing before fetching. Useful
+    behind a textarea.
+  </Prop>
+  <Prop name="autoPlay" type="boolean = false">
+    Start speaking as soon as the audio is ready.
+  </Prop>
+</Props>
+
+Every word also carries `data-spoken-state` and `data-spoken-index`, so plain
+CSS can style the highlight without any props at all.
+
+## `<Player>`
+
+<Props data-spoken-skip>
+  <Prop name="speech" type="SpokenTextController">
+    The controller to drive. Left out, it reads a provider.
+  </Prop>
+  <Prop name="className" type="string">
+    Class on the wrapper.
+  </Prop>
+  <Prop name="classNames" type="{ root, button, track, elapsed, thumb, time, status }">
+    Per-part classes, same "your class wins" rule. [Styling the
+    highlight](/docs/styling).
+  </Prop>
+  <Prop name="showTime" type="boolean = true">
+    Show elapsed / total time.
+  </Prop>
+  <Prop name="showStatus" type="boolean = true">
+    Show the loading and error line.
+  </Prop>
+</Props>
+
+While blocks are still loading the total is an estimate, and the player says
+so: `~1:42`, dimmed, correcting itself as the audio lands.
+
+## `<SpokenTextProvider>`
+
+<Props data-spoken-skip>
+  <Prop name="children" type="ReactNode">
+    One document, and any number of players for it.
+  </Prop>
+  <Prop name="options" type="endpoint · fetchAlignment · onWordChange · debounceMs · autoPlay">
+    The same options the hook takes, applied to the whole document. Anything
+    written on the `<SpokenText>` inside it wins, so a `debounceMs` can sit
+    next to the text it is about.
+  </Prop>
+</Props>
+
+## `useSpokenText(text, options?)`
+
+Takes the same options as `<SpokenText>`. Pass `null` as the text to switch it
+off. It returns a `SpokenTextController`.
+
+## `useSpokenTextController()`
+
+Returns the controller the nearest `<SpokenTextProvider>` is holding, for
+building a player of your own. Outside a provider it returns nothing.
+
+## `SpokenTextController`
+
+<Props data-spoken-skip>
+  <Prop name="text" type="string">
+    The document as one string, blocks joined.
+  </Prop>
+  <Prop name="words" type="DisplayWord[]">
+    Every word, in order, across every block.
+  </Prop>
+  <Prop name="currentWordIndex, currentWord" type="number, DisplayWord | undefined">
+    The word being spoken, across the document, or `-1` and `undefined`.
+  </Prop>
+  <Prop name="segments" type="{ start, end, kind, status }[]">
+    One per block, as a range over `words`. `status` is `"idle"` until the
+    block has been asked for.
+  </Prop>
+  <Prop name="status, isLoading, isPlaying, error">
+    What it is doing right now.
+  </Prop>
+  <Prop name="currentTime, duration, audioUrl">
+    Playback position and source.
+  </Prop>
+  <Prop name="durationIsEstimate" type="boolean">
+    True while `duration` still counts unloaded blocks at a reading pace. It
+    settles as their audio lands.
+  </Prop>
+  <Prop name="play, pause, toggle" type="() => void">
+    Playback.
+  </Prop>
+  <Prop name="seek, seekToWord, seekToFraction" type="(number) => void">
+    Move the playhead, anywhere in the document.
+  </Prop>
+  <Prop name="getAudioElement" type="() => HTMLAudioElement | null">
+    The underlying `Audio`, for anything the API misses.
+  </Prop>
+</Props>
+
+## `DisplayWord`
+
+<Props data-spoken-skip>
+  <Prop name="text" type="string">
+    The word exactly as it appeared in the source text.
+  </Prop>
+  <Prop name="index" type="number">
+    Its position in the whole document.
+  </Prop>
+  <Prop name="state" type={`"past" | "current" | "future"`}>
+    Where it sits relative to the playhead.
+  </Prop>
+  <Prop name="seekable" type="boolean">
+    True when the word has a timestamp. Words in a block nobody has asked for
+    yet are untimed, and clicking one fetches that block.
+  </Prop>
+  <Prop name="hidden" type="boolean">
+    True for a word that is spoken but not written: something a `say` rule put
+    there. It has timings like any other word and is never rendered.
+  </Prop>
+  <Prop name="start, end" type="number | undefined">
+    Seconds from the start of the document, not of the block.
+  </Prop>
+</Props>
+
+## `BlockKind`
+
+`"heading" | "paragraph" | "list" | "quote"`. What a block is, so a voice can
+read a title like a title. Headings are `h1`–`h6`, list items are `li`, quotes
+are `blockquote`, and everything else is a paragraph. It travels with the text
+to the route and is part of the cache key.
+
+## Also exported
+
+<Props data-spoken-skip>
+  <Prop name="DEFAULT_SKIP" type="readonly SpokenSelector[]">
+    `code`, `pre`, `kbd`, `samp`, `var`, `script`, `style`, `svg`, `canvas`,
+    `iframe`, `math`. Spread it to add to the list rather than replace it.
+  </Prop>
+  <Prop name="DEFAULT_ENDPOINT" type={`"/api/transcription"`}>
+    Where a passage is posted unless `endpoint` says otherwise.
+  </Prop>
+  <Prop name="createEndpointAligner" type="(endpoint) => FetchAlignment">
+    The default aligner, built by hand. A starting point for wrapping the POST.
+  </Prop>
+  <Prop name="clearAlignmentCache" type="() => void">
+    Empties the in-memory cache that keeps one passage from being fetched twice
+    on a page.
+  </Prop>
+  <Prop name="tokenize" type="(text) => Tokens">
+    Words, separators and leading whitespace: how a passage is split.
+  </Prop>
+  <Prop name="alignTokens" type="(tokens, words) => SpokenSpan[]">
+    Match rendered tokens to transcribed words. The whole of [how words are
+    matched to timings](https://github.com/awlevin/spoken-text#how-words-are-matched-to-timings).
+  </Prop>
+  <Prop name="normalizeForAlignment" type="(text) => string">
+    Letters and digits only, casefolded, accents folded. What the two sides are
+    compared on.
+  </Prop>
+  <Prop name="tokenIndexAt" type="(spans, time) => number">
+    Which token is being spoken at a given second.
+  </Prop>
+</Props>
+
+From `spoken-text/server`:
+
+<Props data-spoken-skip>
+  <Prop name="createAlignmentHandler">
+    [The route](/docs/server).
+  </Prop>
+  <Prop name="elevenlabsSpeech, openaiSpeech, openaiTranscription">
+    The bundled speech and transcription adapters.
+  </Prop>
+  <Prop name="vercelBlobCache">
+    The bundled cache.
+  </Prop>
+  <Prop name="sha256Hex" type="(text) => Promise<string>">
+    What the default `hash` is built from.
+  </Prop>
+</Props>

@@ -1,0 +1,228 @@
+export const metadata = {
+  title: "The route · spoken-text",
+  description:
+    "createAlignmentHandler, the ElevenLabs, OpenAI and Vercel Blob adapters, bringing your own speech, transcription and cache, and the wire format between the two halves.",
+};
+
+import { Prop, Props } from "@/components/Props";
+
+# The route
+
+The client half needs somewhere to send text. `spoken-text/server` gives you
+that route in one line:
+
+```ts
+// app/api/transcription/route.ts
+import {
+  createAlignmentHandler,
+  elevenlabsSpeech,
+  vercelBlobCache,
+} from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: elevenlabsSpeech(),
+  cache: vercelBlobCache(),
+});
+```
+
+`createAlignmentHandler` returns a plain `(Request) => Promise<Response>`, so
+it mounts in a Next.js route handler, a Hono route, a Deno server: anywhere the
+web standard is spoken.
+
+## `createAlignmentHandler`
+
+<Props data-spoken-skip>
+  <Prop name="speech" type="(text, { kind }) => Promise<SpeechAudio>">
+    Required. Turns a passage into audio. Return `words` with it and there is
+    nothing left to do.
+  </Prop>
+  <Prop name="transcribe" type="(audio) => Promise<Transcript>">
+    Reads word-level timings back off that audio. Only needed when `speech`
+    does not return `words` of its own.
+  </Prop>
+  <Prop name="cache" type="{ get, set }">
+    Where generated audio is kept. Without one, every request regenerates the
+    audio and returns it inline as a `data:` URL.
+  </Prop>
+  <Prop name="maxLength" type="number = 2000">
+    The longest passage accepted, in characters, per block.
+  </Prop>
+  <Prop name="hash" type="(text, kind) => string | Promise<string>">
+    The cache key. The default is the SHA-256 of the kind and the text.
+    Override it to fold the voice or the model into the key.
+  </Prop>
+  <Prop name="onError" type="(error: unknown) => void">
+    Called with anything thrown while generating. Defaults to `console.error`.
+  </Prop>
+</Props>
+
+Supply neither a `speech` that times its own output nor a `transcribe` and the
+handler tells you so, by name, on the first request.
+
+## `elevenlabsSpeech`
+
+ElevenLabs returns the audio and a timestamp for every character of the text in
+one call, so there is nothing to transcribe and nothing to drift: the timings
+are the model's own record of what it said.
+
+It needs `ELEVENLABS_API_KEY` (or `ELEVEN_LABS_API_KEY`) in the environment, or
+an `apiKey` passed to it. It defaults to George, a premade voice. **Premade
+voices work on every plan, including the free tier; the voice library needs a
+paid one.**
+
+<Props data-spoken-skip>
+  <Prop name="voiceId" type={`string = "JBFqnCBsd6RMkjVDRZzb"`}>
+    George, by default. Any voice you can reach on your plan.
+  </Prop>
+  <Prop name="modelId" type={`string = "eleven_multilingual_v2"`}>
+    The model to speak with.
+  </Prop>
+  <Prop name="outputFormat" type={`string = "mp3_44100_128"`}>
+    The content type follows from it.
+  </Prop>
+  <Prop name="voiceSettings" type="settings | (kind) => settings">
+    `stability`, `similarity_boost`, `style`, `speed` and `use_speaker_boost`,
+    or a function of the block's kind.
+  </Prop>
+  <Prop name="apiKey" type="string = ELEVENLABS_API_KEY">
+    Passed in rather than read from the environment.
+  </Prop>
+</Props>
+
+## `openaiSpeech` and `openaiTranscription`
+
+`tts-1` hands back an MP3 and nothing else, so it needs `whisper-1` to read the
+timings back off the recording. Two model calls rather than one, and the two
+can disagree about what was said.
+
+```ts
+import { openaiSpeech, openaiTranscription } from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: openaiSpeech({
+    model: "gpt-4o-mini-tts",
+    voice: "nova",
+    instructions: (kind) =>
+      kind === "heading" ? "Announce it, then pause." : "Read it warmly.",
+  }),
+  transcribe: openaiTranscription({ model: "whisper-1", language: "en" }),
+  cache: vercelBlobCache(),
+});
+```
+
+Both read `OPENAI_API_KEY`, and both need `ai` and `@ai-sdk/openai` installed.
+
+## `vercelBlobCache`
+
+Needs `@vercel/blob` and `BLOB_READ_WRITE_TOKEN`. The audio and the timings
+land at `spoken-text/<hash>/audio` and `spoken-text/<hash>/alignment.json`.
+
+A model call per passage is slow and not free, so nothing is generated twice.
+The passage and its kind are hashed with SHA-256 and handed to the cache, which
+is asked first on every request. Identical text anywhere, by anyone, is a cache
+hit and comes back in milliseconds.
+
+The cache is content-addressed and never invalidated, which is fine because the
+key covers the entire input. Change a comma, or make a paragraph a heading, and
+you get a new hash and a new recording. Change the *voice*, though, and the key
+does not move on its own, so pass a `hash` that includes it if you switch
+voices at runtime.
+
+## The adapters are optional
+
+Nothing in the package requires ElevenLabs, OpenAI or Vercel. `speech`,
+`transcribe` and `cache` are yours to supply, and the bundled adapters are
+opt-in helpers that import their dependencies only when called.
+
+<Props data-spoken-skip>
+  <Prop name="elevenlabsSpeech">
+    `ELEVENLABS_API_KEY`. No package: it is one `fetch`.
+  </Prop>
+  <Prop name="openaiSpeech, openaiTranscription">
+    `ai`, `@ai-sdk/openai`, and `OPENAI_API_KEY`.
+  </Prop>
+  <Prop name="vercelBlobCache">
+    `@vercel/blob`, and `BLOB_READ_WRITE_TOKEN`.
+  </Prop>
+</Props>
+
+Install only the ones you use. They are optional peer dependencies, so nothing
+is pulled in on your behalf.
+
+## Bringing your own
+
+Writing your own is small. Return `words` from `speech` if your model times its
+own output, and leave `transcribe` out:
+
+```ts
+export const POST = createAlignmentHandler({
+  speech: async (text, { kind }) => ({
+    audio: await myTts(text, kind), // a Uint8Array
+    contentType: "audio/mpeg",
+    words: [{ text: "Hello", start: 0, end: 0.42 } /* … */],
+    duration: 3.1,
+  }),
+  cache: {
+    get: (hash) => redis.get(`speech:${hash}`),
+    set: async (hash, audio, words, duration) => {
+      const audioUrl = await s3.put(hash, audio.audio, audio.contentType);
+      const entry = { audioUrl, words, duration };
+      await redis.set(`speech:${hash}`, entry);
+      return entry;
+    },
+  },
+});
+```
+
+If it does not time its own output, add a `transcribe` and the handler asks it
+instead:
+
+```ts
+transcribe: async ({ audio }) => ({
+  words: await myAligner(audio), // [{ text, start, end }, …]
+}),
+```
+
+## The kind reaches the adapter
+
+Every block says what it is, so a voice can read a title like a title. The
+client sends it, and the handler passes it straight through as the second
+argument to `speech`:
+
+```ts
+speech: elevenlabsSpeech({
+  voiceSettings: (kind) =>
+    kind === "heading" ? { speed: 0.9, stability: 0.6 } : undefined,
+}),
+```
+
+`kind` is one of `"heading"`, `"paragraph"`, `"list"` or `"quote"`, and it is
+part of the default cache key, so the same words as a heading and as a
+paragraph are two recordings. [Reading a whole
+document](/docs/documents) says where it comes from.
+
+## The wire format
+
+Between the two halves there is one POST, and it is worth knowing because it is
+the seam you can replace. In:
+
+```json
+{ "content": "The tide came in slowly that morning.", "kind": "paragraph" }
+```
+
+Out:
+
+```json
+{
+  "audioUrl": "https://…/spoken-text/<hash>/audio",
+  "words": [{ "text": "The", "start": 0, "end": 0.18 }],
+  "duration": 6.4
+}
+```
+
+A missing `kind` is read as `"paragraph"`, so a client that predates it is not
+turned away. `duration` is optional; without it the length is taken from the
+audio element once it loads.
+
+On the client, `fetchAlignment` takes the same seam from the other side: give
+`<SpokenText>` one and the endpoint is never used.
