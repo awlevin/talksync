@@ -121,6 +121,42 @@ which is what you want in MDX.
 
 Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
 
+### Saying what is not on the page
+
+Some of what a listener wants to hear was never written down: which section
+this is, what the picture shows, that a code sample went by unread. `say` puts
+those words into the audio without putting them on the page.
+
+```tsx
+<SpokenText
+  say={{
+    h2: ({ count }) => ({ before: `Section ${count}.` }),
+    pre: () => "A short code sample, skipped.",
+    svg: ({ element }) => `A drawing. ${element.props["aria-label"]}`,
+  }}
+>
+  …
+</SpokenText>
+```
+
+Keys select the way `skip` does — a tag, a `.class`, an `[attr]` — and the
+first key that matches an element wins. A rule is handed that element, the text
+it says on its own, its `kind`, and `count`: how many elements this same rule
+has matched so far, which is what lets the headings number themselves.
+`{ before }` and `{ after }` keep the element's own words and speak around
+them, a plain string replaces them, and nothing at all changes nothing.
+
+A rule on something **skipped** speaks in its place — the one way skipped
+content gets a voice. The `pre` above still renders where it was written, still
+unread, and the listener hears a sentence saying it went by.
+
+The words a rule adds are hidden words: they go into the document's word list
+and into the text handed to the aligner, at the point the element sits, so
+everything around them stays exactly timed; and `<SpokenText>` renders nothing
+for them. While one is spoken `currentWordIndex` points at it, no word on the
+page is `current`, and the band waits rather than lighting up over nothing.
+`DisplayWord.hidden` is how you tell them apart.
+
 ### `<SpokenText>`
 
 | Prop              | Type                                          | Default                | What it does                                                                              |
@@ -129,6 +165,7 @@ Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
 | `speech`          | `SpokenTextController`                        |                        | A controller from `useSpokenText`. Left out, it reads a provider, or else manages itself.   |
 | `skip`            | `(string \| ((el) => boolean))[]`             | `DEFAULT_SKIP`         | Parts of the tree to leave unspoken. They still render.                                     |
 | `only`            | `(string \| ((el) => boolean))[]`             |                        | Speak only these parts of the tree. Unset means all of it.                                  |
+| `say`             | `Record<string, SayRule>`                     |                        | Words to speak that are not on the page: a section number, alt text, a note where something was skipped. |
 | `as`              | `"p" \| "div" \| "span" \| …`                | `"div"` / `"p"`        | Element it renders into: `div` for a tree, `p` for a string.                                |
 | `className`       | `string`                                      |                        | Class on that element.                                                                      |
 | `classNames`      | `{ word, past, current, future, separator }`  |                        | Classes for the words and for the gaps between them. Setting one drops the built-in look for that slot, so your CSS wins. |
@@ -175,7 +212,7 @@ off. It returns:
 
 | Field                                       | What it is                                                          |
 | ------------------------------------------- | ------------------------------------------------------------------- |
-| `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings  |
+| `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings, and `hidden` for a word that is said and not shown |
 | `currentWordIndex`, `currentWord`           | The word being spoken, across the document, or `-1` / `undefined`    |
 | `segments`                                  | `{ start, end, kind, status }[]`: one per block, over `words`         |
 | `status`, `isLoading`, `isPlaying`, `error` | What it is doing right now                                           |
