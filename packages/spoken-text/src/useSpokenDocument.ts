@@ -378,6 +378,7 @@ export const useSpokenDocument = (
           seekable: !!span,
           start: span ? offset + span.start : undefined,
           end: span ? offset + span.end : undefined,
+          hidden: doc.hidden[index] === 1,
         };
       }),
     [doc, spans, offsets, segmentOf, activeIndex],

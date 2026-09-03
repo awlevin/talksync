@@ -1,6 +1,19 @@
 "use client";
 
-import { Player, SpokenText, SpokenTextProvider } from "spoken-text";
+import { Player, SpokenText, SpokenTextProvider, type SayRule } from "spoken-text";
+
+/**
+ * Words the reader hears and never sees: the section number ahead of each
+ * heading, a note where the code sample is, and the drawing's own description,
+ * which is on the page only as an `aria-label`.
+ *
+ * Held outside the component so the walk is not redone on every render.
+ */
+const say: Record<string, SayRule> = {
+  h2: ({ count }) => ({ before: `Section ${count}.` }),
+  pre: () => "A short code sample, skipped.",
+  svg: ({ element }) => `A drawing. ${element.props["aria-label"]}`,
+};
 
 /**
  * A whole document read as one piece.
@@ -12,9 +25,9 @@ import { Player, SpokenText, SpokenTextProvider } from "spoken-text";
  * plays, and a click anywhere in the article fetches that block and starts
  * there.
  *
- * The `pre` block and the `1:5:5` inside the paragraph are both left out of
- * the audio by the default skip list, and both still render exactly where they
- * were written.
+ * The `pre` block, the drawing and the `1:5:5` inside the paragraph are all
+ * left out of the audio by the default skip list, and all still render exactly
+ * where they were written. The first two get their own words from `say`.
  */
 export const Article = () => (
   <SpokenTextProvider>
@@ -27,7 +40,10 @@ export const Article = () => (
     </div>
 
     <article className="mx-auto max-w-[68ch] py-10 sm:py-14">
-      <SpokenText className="text-[1.0625rem] leading-[1.75] text-ink-2 sm:text-[1.1875rem]">
+      <SpokenText
+        say={say}
+        className="text-[1.0625rem] leading-[1.75] text-ink-2 sm:text-[1.1875rem]"
+      >
         <h1 className="display mb-6 text-[2rem] font-bold leading-tight text-ink sm:text-[2.6rem]">
           A jar of flour and water
         </h1>
@@ -91,6 +107,34 @@ export const Article = () => (
           <li>It should smell of yogurt and apples, never of nail polish.</li>
           <li>A spoonful floats in a glass of water when it is ready.</li>
         </ul>
+
+        <figure className="mb-6">
+          {/* The drawing is skipped, like every `svg`. What it shows is in the
+              label, and the `say` rule reads that out in its place. */}
+          <svg
+            role="img"
+            aria-label="Three jars in a row: one just fed, one risen and domed, one fallen back."
+            viewBox="0 0 240 88"
+            className="w-full rounded border border-rule bg-panel p-4"
+          >
+            <g className="fill-none stroke-rule" strokeWidth="2">
+              <rect x="16" y="10" width="56" height="6" rx="2" />
+              <rect x="20" y="16" width="48" height="60" rx="4" />
+              <rect x="92" y="10" width="56" height="6" rx="2" />
+              <rect x="96" y="16" width="48" height="60" rx="4" />
+              <rect x="168" y="10" width="56" height="6" rx="2" />
+              <rect x="172" y="16" width="48" height="60" rx="4" />
+            </g>
+            <g className="fill-lit">
+              <path d="M20 60h48v12a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4Z" />
+              <path d="M96 40q24-18 48 0v32a4 4 0 0 1-4 4h-40a4 4 0 0 1-4-4Z" />
+              <path d="M172 52q24 12 48 0v20a4 4 0 0 1-4 4h-40a4 4 0 0 1-4-4Z" />
+            </g>
+          </svg>
+          <figcaption className="mt-2 text-[0.8125rem] text-ink-2/70">
+            Just fed, at the dome, and fallen back.
+          </figcaption>
+        </figure>
 
         <p className="mb-6">
           A starter that has gone quiet is almost never dead. It is usually

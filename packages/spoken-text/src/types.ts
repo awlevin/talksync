@@ -30,6 +30,11 @@ export type DisplayWord = {
   /** Seconds from the start of the document, not of the block. */
   start?: number;
   end?: number;
+  /**
+   * True for a word that is said but not on the page — see `say`. Nothing is
+   * rendered for it, so while it is spoken no visible word is `current`.
+   */
+  hidden?: boolean;
 };
 
 /**

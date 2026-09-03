@@ -3,6 +3,8 @@ import {
   collectDocument,
   DEFAULT_SKIP,
   documentFromText,
+  documentSignature,
+  type SayInfo,
 } from "../document.js";
 
 const rules = { skip: DEFAULT_SKIP };
@@ -10,6 +12,10 @@ const rules = { skip: DEFAULT_SKIP };
 /** What the aligner is asked for, block by block. */
 const blocks = (document: ReturnType<typeof collectDocument>) =>
   document.segments.map((s) => [s.start, s.end, s.text]);
+
+/** The words that are said and never shown. */
+const unshown = (document: ReturnType<typeof collectDocument>) =>
+  document.words.filter((_, index) => document.hidden[index] === 1);
 
 describe("collectDocument - walking a tree", () => {
   it("reads a heading and its paragraphs as one document in order", () => {
@@ -297,5 +303,196 @@ describe("collectDocument - only", () => {
     );
 
     expect(document.words).toEqual(["This", "one."]);
+  });
+});
+
+describe("collectDocument - saying what is not on the page", () => {
+  it("announces every heading, numbering them as it goes", () => {
+    const document = collectDocument(
+      <>
+        <h2>What is living in there</h2>
+        <p>Wild yeasts eat sugars.</p>
+        <h2>Feeding it</h2>
+        <p>One part starter.</p>
+        <h2>Reading the jar</h2>
+      </>,
+      { ...rules, say: { h2: ({ count }) => ({ before: `Section ${count}.` }) } },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 7, "Section 1. What is living in there"],
+      [7, 11, "Wild yeasts eat sugars."],
+      [11, 15, "Section 2. Feeding it"],
+      [15, 18, "One part starter."],
+      [18, 23, "Section 3. Reading the jar"],
+    ]);
+    expect(unshown(document)).toEqual([
+      "Section", "1.", "Section", "2.", "Section", "3.",
+    ]);
+  });
+
+  it("speaks after the element's own words as well as before them", () => {
+    const document = collectDocument(
+      <blockquote>Bread is warm.</blockquote>,
+      { ...rules, say: { blockquote: () => ({ after: "End of quotation." }) } },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 6, "Bread is warm. End of quotation."],
+    ]);
+    expect(unshown(document)).toEqual(["End", "of", "quotation."]);
+  });
+
+  it("replaces what an element says when the rule returns a string", () => {
+    const document = collectDocument(
+      <>
+        <p>Before.</p>
+        <p className="figure">3.14159265</p>
+      </>,
+      { ...rules, say: { ".figure": () => "Pi, near enough." } },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 1, "Before."],
+      [1, 4, "Pi, near enough."],
+    ]);
+    // The element's own words are said by the rule instead, so none of them
+    // are in the document.
+    expect(document.words).toEqual(["Before.", "Pi,", "near", "enough."]);
+  });
+
+  it("speaks in place of a skipped block, as a block of its own", () => {
+    const document = collectDocument(
+      <>
+        <p>Before the block.</p>
+        <pre>const x = 1;</pre>
+        <p>After the block.</p>
+      </>,
+      { ...rules, say: { pre: () => "Code sample skipped." } },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 3, "Before the block."],
+      [3, 6, "Code sample skipped."],
+      [6, 9, "After the block."],
+    ]);
+    expect(unshown(document)).toEqual(["Code", "sample", "skipped."]);
+  });
+
+  it("speaks in place of an inline skip, inside the sentence", () => {
+    const document = collectDocument(
+      <p>
+        Pass the <code>debounceMs</code> option.
+      </p>,
+      { ...rules, say: { code: () => "a debounce setting" } },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 6, "Pass the a debounce setting  option."],
+    ]);
+    expect(unshown(document)).toEqual(["a", "debounce", "setting"]);
+  });
+
+  it("hands the rule what the element says, after skipping", () => {
+    const seen: SayInfo[] = [];
+    const note = (info: SayInfo) => {
+      seen.push(info);
+      return null;
+    };
+
+    collectDocument(
+      <>
+        <h2>Feeding it</h2>
+        <p>
+          Pass the <code>debounceMs</code> option.
+        </p>
+        <pre>const x = 1;</pre>
+      </>,
+      { ...rules, say: { h2: note, p: note, pre: note } },
+    );
+
+    expect(seen.map((info) => [info.kind, info.text])).toEqual([
+      ["heading", "Feeding it"],
+      ["paragraph", "Pass the  option."],
+      // Nothing of a skipped element is said, so the rule is handed nothing.
+      ["paragraph", ""],
+    ]);
+  });
+
+  it("counts every match, including the ones that say nothing", () => {
+    const counted: number[] = [];
+    const document = collectDocument(
+      <>
+        <p>One.</p>
+        <p>Two.</p>
+        <p>Three.</p>
+      </>,
+      {
+        ...rules,
+        say: {
+          p: ({ count }) => {
+            counted.push(count);
+            return count === 2 ? { before: "The second one." } : null;
+          },
+        },
+      },
+    );
+
+    expect(counted).toEqual([1, 2, 3]);
+    expect(unshown(document)).toEqual(["The", "second", "one."]);
+  });
+
+  it("takes the first rule that matches an element", () => {
+    const document = collectDocument(
+      <h2 className="titled">Feeding it</h2>,
+      {
+        ...rules,
+        say: {
+          h2: () => ({ before: "The first rule." }),
+          ".titled": () => ({ before: "The second rule." }),
+        },
+      },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 5, "The first rule. Feeding it"],
+    ]);
+  });
+
+  it("says nothing outside an `only` fence", () => {
+    const document = collectDocument(
+      <div>
+        <pre>const x = 1;</pre>
+        <article className="prose">
+          <p>The body.</p>
+          <pre>const y = 2;</pre>
+        </article>
+      </div>,
+      {
+        skip: DEFAULT_SKIP,
+        only: [".prose"],
+        say: { pre: () => "Code sample skipped." },
+      },
+    );
+
+    expect(blocks(document)).toEqual([
+      [0, 2, "The body."],
+      [2, 5, "Code sample skipped."],
+    ]);
+  });
+
+  it("is a different reading when the rule says something else", () => {
+    const tree = <h2>Feeding it</h2>;
+    const signature = (announcement?: string) =>
+      documentSignature(
+        collectDocument(tree, {
+          ...rules,
+          say: announcement ? { h2: () => ({ before: announcement }) } : undefined,
+        }),
+      );
+
+    expect(signature("Section one.")).toBe(signature("Section one."));
+    expect(signature("Section one.")).not.toBe(signature("Section two."));
+    expect(signature("Section one.")).not.toBe(signature());
   });
 });
