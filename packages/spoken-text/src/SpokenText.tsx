@@ -176,7 +176,6 @@ export const SpokenText = ({
   useEffect(() => {
     if (!register || speech) return;
     register({ document, options: readOptions });
-    return () => register(null);
   }, [
     register,
     speech,
@@ -186,6 +185,13 @@ export const SpokenText = ({
     debounceMs,
     autoPlay,
   ]);
+
+  // Unregister on unmount only. Doing it in the effect above would blank the
+  // provider's document for a render on every keystroke behind a debounce.
+  useEffect(() => {
+    if (!register) return;
+    return () => register(null);
+  }, [register]);
 
   const { currentWordIndex, currentWord } = controller;
   useEffect(() => {
