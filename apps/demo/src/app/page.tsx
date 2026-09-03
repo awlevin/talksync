@@ -99,6 +99,9 @@ export default function HomePage() {
           </span>
         </div>
         <nav className="flex items-center gap-6">
+          <a className="label hover:text-accent" href="/article">
+            Whole article
+          </a>
           <a className="label hidden hover:text-accent sm:inline" href="/example">
             Minimal example
           </a>
@@ -262,22 +265,127 @@ export default function HomePage() {
           </section>
 
           <section className="pb-16 lg:pb-24">
+            <SectionRule name="A whole document" file="provider" />
+            <Lede code={["<SpokenText>", "<SpokenTextProvider>", "<Player>"]}>
+              Hand &lt;SpokenText&gt; a heading and its paragraphs instead of a
+              string. Each block is its own alignment request, so the first one
+              is fetched on mount, the next is warmed while it plays, and the
+              highlight runs the length of the page.
+            </Lede>
+
+            <div className="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[1.15fr_1fr]">
+              <div className="panel overflow-hidden">
+                <Pane file="app/article/page.tsx">
+                  <Code>
+                    {"<"}
+                    <Api>SpokenTextProvider</Api>
+                    {">"}
+                    {"\n  <header className=\"sticky top-0\">"}
+                    {"\n    <"}
+                    <Api>Player</Api>
+                    {" />"}
+                    {"\n  </header>"}
+                    {"\n\n  <"}
+                    <Api>SpokenText</Api>
+                    {">"}
+                    {"\n    <h1>A jar of flour and water</h1>"}
+                    {"\n    <p>A sourdough starter is the…</p>"}
+                    {"\n    <h2>Feeding it</h2>"}
+                    {"\n    <p>One part starter, five parts…</p>"}
+                    {"\n  </"}
+                    <Api>SpokenText</Api>
+                    {">"}
+                    {"\n</"}
+                    <Api>SpokenTextProvider</Api>
+                    {">"}
+                  </Code>
+                </Pane>
+              </div>
+
+              <dl className="text-[0.9375rem] leading-relaxed">
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">One playhead</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["currentWordIndex", "segments"]}>
+                      currentWordIndex is one number across the whole document,
+                      and segments says where each block starts and ends. A
+                      string is a document with one block, so nothing about a
+                      single passage changes.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">Fetched as it is reached</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["duration", "durationIsEstimate"]}>
+                      Nothing waits on one enormous request. Until every block
+                      has landed, duration counts the rest at a reading pace and
+                      durationIsEstimate says so, which is why the player shows
+                      a tilde.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">The boundary</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["<MyArticle />"]}>
+                      The walk sees the elements it is handed, not inside a
+                      child component. &lt;MyArticle /&gt; is a closed box. MDX
+                      output and hand-written pages are both fine.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">See it running</dt>
+                  <dd className="text-ink-2">
+                    <a
+                      className="text-accent underline decoration-dotted underline-offset-4"
+                      href="/article"
+                    >
+                      An article, read end to end
+                    </a>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          <section className="pb-16 lg:pb-24">
             <SectionRule name="The API" file="exports" />
             <Lede>The whole surface, so you can see where the escape hatches are.</Lede>
 
             <div className="grid grid-cols-1 gap-x-14 gap-y-12 lg:grid-cols-[1.2fr_1fr]">
               <div>
                 <div className="api-head mb-2">&lt;SpokenText&gt;</div>
-                <Row name="children" type="string" code={["speech"]}>
-                  The passage to speak. Required unless you pass speech.
+                <Row name="children" type="string | ReactNode" code={["<h2>", "<p>"]}>
+                  A passage, or a tree of elements. Headings and paragraphs keep
+                  their tags; each one becomes its own alignment request.
                 </Row>
                 <Row
                   name="speech"
                   type="SpokenTextController"
-                  code={["useSpokenText", "<Transport>"]}
+                  code={["useSpokenText", "<SpokenTextProvider>"]}
                 >
-                  A controller from useSpokenText, so a passage and a
-                  &lt;Transport&gt; share one audio element.
+                  A controller from useSpokenText. Left out, it reads the
+                  nearest &lt;SpokenTextProvider&gt;, and otherwise manages
+                  itself.
+                </Row>
+                <Row
+                  name="skip"
+                  type="(string | (el) => boolean)[]"
+                  code={["code", "pre", ".footnote", "[aria-hidden]"]}
+                >
+                  Parts of the tree to leave unspoken. A tag, a .class, an
+                  [attr], or a predicate. Defaults to code, pre and the rest of
+                  the things nobody wants read aloud.
+                </Row>
+                <Row
+                  name="only"
+                  type="(string | (el) => boolean)[]"
+                  code={[".prose", "data-spoken"]}
+                >
+                  Speak only these parts of the tree. Unset means all of it.
+                  data-spoken and data-spoken-skip are the per-element forms.
                 </Row>
                 <Row name="classNames" type="{ word, past, current, future }">
                   Your classes per word state. Supplying one drops the built-in
@@ -306,11 +414,12 @@ export default function HomePage() {
                   type={'"p" | "div" | "span" | …'}
                   code={["className", "style"]}
                 >
-                  Element the passage renders into. Also takes className and
-                  style.
+                  Element it renders into: div for a tree, p for a string. Also
+                  takes className and style.
                 </Row>
                 <Row name="seekOnWordClick" type="boolean = true">
-                  Click a word to hear the passage from there.
+                  Click a word to hear the document from there, fetching its
+                  block if it has not been asked for yet.
                 </Row>
                 <Row name="autoPlay" type="boolean = false">
                   Speak as soon as the audio is ready.
@@ -324,11 +433,11 @@ export default function HomePage() {
                 <div className="api-head mb-2">useSpokenText(text, options)</div>
                 <Cluster
                   title="What is being said"
-                  names="text · words · currentWordIndex · currentWord"
+                  names="text · words · currentWordIndex · currentWord · segments"
                 />
                 <Cluster
                   title="Where playback is"
-                  names="status · isLoading · isPlaying · error · currentTime · duration · audioUrl"
+                  names="status · isLoading · isPlaying · error · currentTime · duration · durationIsEstimate · audioUrl"
                 />
                 <Cluster
                   title="Moving it"
@@ -336,10 +445,11 @@ export default function HomePage() {
                 />
                 <Cluster title="The escape hatch" names="getAudioElement()" />
 
-                <div className="api-head mb-2 mt-9">&lt;Transport&gt;</div>
+                <div className="api-head mb-2 mt-9">&lt;Player&gt;</div>
                 <Row name="speech" type="SpokenTextController">
-                  The controller to drive. A play button and a scrubber; optional,
-                  since the passage highlights on its own.
+                  The controller to drive. Left out, it drives the nearest
+                  provider, so it can live in a sticky header. A play button and
+                  a scrubber; optional, since the text highlights on its own.
                 </Row>
                 <Row
                   name="classNames"
@@ -347,22 +457,53 @@ export default function HomePage() {
                   code={["showTime", "showStatus"]}
                 >
                   Restyle any part of it. Also takes showTime and showStatus.
+                  The total time is dimmed and marked with a tilde while blocks
+                  are still loading.
+                </Row>
+
+                <div className="api-head mb-2 mt-9">
+                  &lt;SpokenTextProvider&gt;
+                </div>
+                <Row
+                  name="children"
+                  type="ReactNode"
+                  code={["<SpokenText>", "<Player>"]}
+                >
+                  Holds one controller for the document below it, so the
+                  &lt;SpokenText&gt; and the &lt;Player&gt; do not have to be
+                  siblings.
+                </Row>
+                <Row
+                  name="options"
+                  type="endpoint · fetchAlignment · debounceMs · autoPlay"
+                >
+                  The same options the hook takes, for the whole document.
                 </Row>
 
                 <div className="panel mt-9 overflow-hidden">
-                  <Pane file="three of those, together">
+                  <Pane file="a whole page, read as one">
                     <Code>
                       {"<"}
+                      <Api>SpokenTextProvider</Api>
+                      {">"}
+                      {"\n  <StickyHeader>"}
+                      {"\n    <"}
+                      <Api>Player</Api>
+                      {" />"}
+                      {"\n  </StickyHeader>"}
+                      {"\n\n  <article>"}
+                      {"\n    <"}
                       <Api>SpokenText</Api>
-                      {'\n  endpoint="/api/speech"'}
-                      {'\n  classNames={{ current: "bg-sky-200" }}'}
-                      {"\n  onWordChange={(index, word) =>"}
-                      {'\n    setCaption(word?.text ?? "")'}
-                      {"\n  }"}
-                      {"\n>"}
-                      {"\n  {text}"}
+                      {'\n      skip={["code", "figcaption"]}'}
+                      {"\n    >"}
+                      {"\n      <h2>Feeding it</h2>"}
+                      {"\n      <p>One part starter, five…</p>"}
+                      {"\n    </"}
+                      <Api>SpokenText</Api>
+                      {">"}
+                      {"\n  </article>"}
                       {"\n</"}
-                      <Api>SpokenText</Api>
+                      <Api>SpokenTextProvider</Api>
                       {">"}
                     </Code>
                   </Pane>
@@ -375,7 +516,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 gap-x-14 lg:grid-cols-2">
                 <Exports
                   from="spoken-text"
-                  names="tokenize · alignTokens · tokenIndexAt · normalizeForAlignment · createEndpointAligner · clearAlignmentCache · DEFAULT_ENDPOINT"
+                  names="useSpokenTextController · tokenize · alignTokens · tokenIndexAt · normalizeForAlignment · createEndpointAligner · clearAlignmentCache · DEFAULT_SKIP · DEFAULT_ENDPOINT"
                 />
                 <Exports
                   from="spoken-text/server"

@@ -30,18 +30,64 @@ the moment it is spoken. Click any word to hear the passage from there.
 That route is yours to mount. It is one line: see
 [Mounting the route](#mounting-the-route) below.
 
-If you want a play button and a scrubber, hold the controller yourself and put
-a `Transport` next to it:
+### A whole document
+
+Hand it elements instead of a string and it reads the lot:
 
 ```tsx
-import { SpokenText, Transport, useSpokenText } from "spoken-text";
+<SpokenText>
+  <h2>What is living in there</h2>
+  <p>Wild yeasts eat the sugars in the flour…</p>
+  <h2>Feeding it</h2>
+  <p>One part starter, five parts flour, five parts water…</p>
+</SpokenText>
+```
+
+The structure is kept: an `h2` stays an `h2`, a link stays a link, only text is
+wrapped. Each heading, paragraph, list item and blockquote is its **own**
+alignment request, so each caches on its own, the first is fetched on mount,
+the next is warmed while the current one plays, and clicking a word in a block
+nobody has asked for yet fetches it and starts there.
+
+`currentWordIndex` is one number across the whole document, and `segments` says
+where each block begins and ends. A string is a document with one block, so
+nothing about a single passage changes.
+
+> The walk sees the elements you hand it, not inside a child component.
+> `<SpokenText><MyArticle /></SpokenText>` cannot see the text inside
+> `MyArticle`. MDX output and hand-written pages are both fine.
+
+### A player anywhere on the page
+
+`<SpokenTextProvider>` holds the controller, so the play button does not have to
+be a sibling of the text:
+
+```tsx
+import { Player, SpokenText, SpokenTextProvider } from "spoken-text";
+
+<SpokenTextProvider>
+  <header className="sticky top-0">
+    <Player />
+  </header>
+
+  <article>
+    <SpokenText>{/* the whole document */}</SpokenText>
+  </article>
+</SpokenTextProvider>;
+```
+
+One document per provider. Without a provider, `<SpokenText>` manages itself and
+`<Player>` takes a `speech` prop:
+
+```tsx
+import { Player, SpokenText, useSpokenText } from "spoken-text";
 
 function Reader({ text }: { text: string }) {
   const speech = useSpokenText(text);
   return (
     <>
       <SpokenText speech={speech} />
-      <Transport speech={speech} />
+      <Player speech={speech} />
     </>
   );
 }
@@ -50,35 +96,72 @@ function Reader({ text }: { text: string }) {
 `useSpokenText` on its own is headless. It owns the audio and reports which
 word is being spoken, so you can build whatever UI you like on top of it.
 
+### Leaving things unspoken
+
+`useSpokenText(text, { debounceMs: 900 })` read aloud as prose is noise, and it
+would wreck the alignment besides. So `code`, `pre`, `kbd`, `samp`, `var`,
+`script`, `style`, `svg`, `canvas`, `iframe` and `math` are skipped by default.
+
+Skipped content still renders, untouched, exactly where it is. It is dropped
+only from the text handed to the aligner, so an inline `<code>` in the middle of
+a sentence leaves a gap in what is said and the words on either side stay
+correctly timed.
+
+```tsx
+<SpokenText skip={["code", "pre", "figcaption", ".footnote"]}>…</SpokenText>
+<SpokenText skip={(el) => el.type === "aside"}>…</SpokenText>
+<SpokenText only={[".prose"]}>…</SpokenText>
+```
+
+Both props take an array of selectors — a tag (`"pre"`), a class
+(`".footnote"`), an attribute (`"[aria-hidden]"`) — or a predicate over the
+React element. `only` fences the field; `skip` cuts inside it. Per element,
+`data-spoken` and `data-spoken-skip` do the same job at the point of authorship,
+which is what you want in MDX.
+
+Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
+
 ### `<SpokenText>`
 
-| Prop              | Type                                         | Default                | What it does                                                                           |
-| ----------------- | -------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------- |
-| `children`        | `string`                                     |                        | The passage to speak. Required unless you pass `speech`.                                 |
-| `speech`          | `SpokenTextController`                       |                        | A controller from `useSpokenText`, to share one passage with a `Transport`.              |
-| `as`              | `"p" \| "div" \| "span" \| …`                 | `"p"`                  | Element the passage renders into.                                                        |
-| `className`       | `string`                                     |                        | Class on that element.                                                                   |
-| `classNames`      | `{ word, past, current, future }`            |                        | Per-word classes. Setting one drops the built-in look for that slot, so your CSS wins.   |
-| `renderWord`      | `(word: DisplayWord) => ReactNode`           |                        | Render words yourself. Whitespace is still inserted for you.                             |
-| `seekOnWordClick` | `boolean`                                    | `true`                 | Click a word to play from there.                                                         |
-| `endpoint`        | `string`                                     | `"/api/transcription"` | Route that turns text into audio and timings.                                            |
-| `fetchAlignment`  | `(text: string) => Promise<Alignment>`       |                        | Skip `endpoint` and resolve the alignment however you like.                              |
-| `onWordChange`    | `(index: number, word?: DisplayWord) => void` |                        | Fires when the spoken word changes. `-1` means nothing is spoken yet.                    |
-| `debounceMs`      | `number`                                     | `0`                    | Wait this long after `children` stops changing before fetching. Useful behind a textarea. |
-| `autoPlay`        | `boolean`                                    | `false`                | Start speaking as soon as the audio is ready.                                            |
+| Prop              | Type                                          | Default                | What it does                                                                              |
+| ----------------- | --------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------- |
+| `children`        | `string \| ReactNode`                         |                        | A passage, or a tree of elements. Each block becomes its own alignment request.             |
+| `speech`          | `SpokenTextController`                        |                        | A controller from `useSpokenText`. Left out, it reads a provider, or else manages itself.   |
+| `skip`            | `(string \| ((el) => boolean))[]`             | `DEFAULT_SKIP`         | Parts of the tree to leave unspoken. They still render.                                     |
+| `only`            | `(string \| ((el) => boolean))[]`             |                        | Speak only these parts of the tree. Unset means all of it.                                  |
+| `as`              | `"p" \| "div" \| "span" \| …`                | `"div"` / `"p"`        | Element it renders into: `div` for a tree, `p` for a string.                                |
+| `className`       | `string`                                      |                        | Class on that element.                                                                      |
+| `classNames`      | `{ word, past, current, future }`             |                        | Per-word classes. Setting one drops the built-in look for that slot, so your CSS wins.      |
+| `renderWord`      | `(word: DisplayWord) => ReactNode`            |                        | Render words yourself. Whitespace is still inserted for you.                                |
+| `seekOnWordClick` | `boolean`                                     | `true`                 | Click a word to play from there, fetching its block if it has not been asked for.           |
+| `endpoint`        | `string`                                      | `"/api/transcription"` | Route that turns text into audio and timings.                                               |
+| `fetchAlignment`  | `(text: string) => Promise<Alignment>`        |                        | Skip `endpoint` and resolve the alignment however you like.                                 |
+| `onWordChange`    | `(index: number, word?: DisplayWord) => void` |                        | Fires when the spoken word changes. `-1` means nothing is spoken yet.                       |
+| `debounceMs`      | `number`                                      | `0`                    | Wait this long after `children` stops changing before fetching. Useful behind a textarea.   |
+| `autoPlay`        | `boolean`                                     | `false`                | Start speaking as soon as the audio is ready.                                               |
 
 Every word also carries `data-spoken-state="past" | "current" | "future"` and
 `data-spoken-index`, so plain CSS can style the highlight without any props.
 
-### `<Transport>`
+### `<SpokenTextProvider>`
 
-| Prop         | Type                                                    | Default | What it does                                  |
-| ------------ | ------------------------------------------------------- | ------- | --------------------------------------------- |
-| `speech`     | `SpokenTextController`                                  |         | Required. The controller to drive.             |
-| `className`  | `string`                                                |         | Class on the wrapper.                          |
-| `classNames` | `{ root, button, track, elapsed, thumb, time, status }` |         | Per-part classes, same "your class wins" rule. |
-| `showTime`   | `boolean`                                               | `true`  | Show elapsed / total time.                     |
-| `showStatus` | `boolean`                                               | `true`  | Show the loading and error line.               |
+Takes the same options as the hook (`endpoint`, `fetchAlignment`,
+`onWordChange`, `debounceMs`, `autoPlay`) and applies them to the whole
+document. `useSpokenTextController()` returns the controller it is holding, for
+building a player of your own.
+
+### `<Player>`
+
+| Prop         | Type                                                    | Default | What it does                                          |
+| ------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------ |
+| `speech`     | `SpokenTextController`                                  |         | The controller to drive. Left out, it reads a provider. |
+| `className`  | `string`                                                |         | Class on the wrapper.                                   |
+| `classNames` | `{ root, button, track, elapsed, thumb, time, status }` |         | Per-part classes, same "your class wins" rule.          |
+| `showTime`   | `boolean`                                               | `true`  | Show elapsed / total time.                              |
+| `showStatus` | `boolean`                                               | `true`  | Show the loading and error line.                        |
+
+While blocks are still loading the total is an estimate, and the player says so:
+`~1:42`, dimmed, correcting itself as the audio lands.
 
 ### `useSpokenText(text, options?)`
 
@@ -88,12 +171,14 @@ off. It returns:
 
 | Field                                       | What it is                                                          |
 | ------------------------------------------- | ------------------------------------------------------------------- |
-| `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings   |
-| `currentWordIndex`, `currentWord`           | The word being spoken, or `-1` / `undefined`                         |
+| `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings  |
+| `currentWordIndex`, `currentWord`           | The word being spoken, across the document, or `-1` / `undefined`    |
+| `segments`                                  | `{ start, end, status }[]`: one per block, over `words`               |
 | `status`, `isLoading`, `isPlaying`, `error` | What it is doing right now                                           |
 | `currentTime`, `duration`, `audioUrl`       | Playback position and source                                         |
+| `durationIsEstimate`                        | True while `duration` still counts unloaded blocks at a reading pace |
 | `play`, `pause`, `toggle`                   | Playback                                                             |
-| `seek`, `seekToWord`, `seekToFraction`      | Move the playhead                                                    |
+| `seek`, `seekToWord`, `seekToFraction`      | Move the playhead, anywhere in the document                          |
 | `getAudioElement`                           | The underlying `Audio`, for anything the API misses                  |
 
 `alignTokens`, `tokenize`, `normalizeForAlignment` and `tokenIndexAt` are
@@ -247,9 +332,14 @@ for the whole of it.
 sample passage both come back with `start === end`. Those words flash rather than
 hold. That comes from the transcript, not from the alignment.
 
+**A child component is a closed box.** React children are opaque until they are
+rendered, so the walk sees the elements you hand it and nothing inside a
+component of your own. `<SpokenText><MyArticle /></SpokenText>` reads nothing.
+MDX output is fine, because MDX hands you real `h2` and `p` elements.
+
 Other things worth knowing: the alignment is tuned for English, the handler caps
-the input at 2,000 characters by default, and long passages take a while on a
-cache miss because both model calls run before anything plays.
+the input at 2,000 characters per block by default, and the first block takes a
+while on a cache miss because both model calls run before anything plays.
 
 ## Repository
 

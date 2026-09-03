@@ -13,10 +13,19 @@
 export { SpokenText } from "./SpokenText.js";
 export type { SpokenTextProps, SpokenTextClassNames } from "./SpokenText.js";
 
-export { Transport } from "./Transport.js";
-export type { TransportProps, TransportClassNames } from "./Transport.js";
+export { Player } from "./Player.js";
+export type { PlayerProps, PlayerClassNames } from "./Player.js";
+
+export {
+  SpokenTextProvider,
+  useSpokenTextController,
+} from "./SpokenTextProvider.js";
+export type { SpokenTextProviderProps } from "./SpokenTextProvider.js";
 
 export { useSpokenText } from "./useSpokenText.js";
+
+export { DEFAULT_SKIP } from "./document.js";
+export type { SpokenSelector } from "./document.js";
 
 export { createEndpointAligner, DEFAULT_ENDPOINT } from "./fetchAlignment.js";
 export { clearAlignmentCache } from "./alignmentCache.js";
@@ -29,6 +38,8 @@ export type {
   Alignment,
   DisplayWord,
   FetchAlignment,
+  SegmentStatus,
+  SpokenSegment,
   SpokenTextController,
   SpokenTextOptions,
   SpokenTextStatus,

@@ -24,8 +24,10 @@ export type DisplayWord = {
   text: string;
   index: number;
   state: WordState;
-  /** True when this word has a timestamp, so it can be clicked to seek. */
+  /** True when this word has a timestamp. Words in a block that has not been
+   * fetched yet are untimed, and clicking one fetches that block. */
   seekable: boolean;
+  /** Seconds from the start of the document, not of the block. */
   start?: number;
   end?: number;
 };
@@ -35,12 +37,30 @@ export type FetchAlignment = (text: string) => Promise<Alignment>;
 
 export type SpokenTextStatus = "idle" | "loading" | "ready" | "error";
 
+/** How far one block has got. `"idle"` means it has not been asked for yet. */
+export type SegmentStatus = SpokenTextStatus;
+
+/**
+ * One block of the document — a heading, a paragraph, a list item — over the
+ * controller's global word list.
+ */
+export type SpokenSegment = {
+  /** Index of this block's first word. */
+  start: number;
+  /** One past this block's last word. */
+  end: number;
+  status: SegmentStatus;
+};
+
 /** Everything needed to drive playback and render highlighting. */
 export type SpokenTextController = {
   text: string;
   words: DisplayWord[];
+  /** An index into `words`, across the whole document. `-1` before anything is said. */
   currentWordIndex: number;
   currentWord: DisplayWord | undefined;
+  /** The blocks the document is read in, in order. */
+  segments: SpokenSegment[];
 
   status: SpokenTextStatus;
   isLoading: boolean;
@@ -49,16 +69,21 @@ export type SpokenTextController = {
 
   currentTime: number;
   duration: number;
+  /**
+   * True while `duration` still counts unloaded blocks at an estimated pace.
+   * It settles as their audio lands.
+   */
+  durationIsEstimate: boolean;
   audioUrl: string | undefined;
 
   play: () => void;
   pause: () => void;
   toggle: () => void;
-  /** Seek to an absolute time in seconds. */
+  /** Seek to an absolute time in seconds, anywhere in the document. */
   seek: (seconds: number) => void;
-  /** Seek to the start of a word and play from there. */
+  /** Seek to a word and play from there, fetching its block if need be. */
   seekToWord: (index: number) => void;
-  /** Seek to a 0-1 position in the audio. */
+  /** Seek to a 0-1 position in the document. */
   seekToFraction: (fraction: number) => void;
 
   /** The `Audio` element driving playback, for anything the API misses. */
@@ -72,7 +97,7 @@ export type SpokenTextOptions = {
   fetchAlignment?: FetchAlignment;
   /** Called whenever the spoken word changes. `-1` means nothing is spoken yet. */
   onWordChange?: (index: number, word: DisplayWord | undefined) => void;
-  /** Wait this long after `text` stops changing before fetching. Default `0`. */
+  /** Wait this long after the text stops changing before fetching. Default `0`. */
   debounceMs?: number;
   /** Start speaking as soon as the audio is ready. Default `false`. */
   autoPlay?: boolean;
