@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { tokenize } from "./tokenize.js";
+import type { BlockKind } from "./types.js";
 
 /**
  * Turning a tree of elements into something that can be read aloud.
@@ -51,12 +52,31 @@ const BLOCK = new Set([
   "thead", "tr", "ul",
 ]);
 
+/**
+ * Tags that say what a block *is*. Every other block — `p`, `div`, `section` —
+ * keeps the kind it sits inside, because markdown wraps list items and quotes
+ * in a paragraph (`<blockquote><p>…</p></blockquote>`) and that paragraph must
+ * not talk over the quote.
+ */
+const KIND_OF: Record<string, BlockKind> = {
+  h1: "heading",
+  h2: "heading",
+  h3: "heading",
+  h4: "heading",
+  h5: "heading",
+  h6: "heading",
+  li: "list",
+  blockquote: "quote",
+};
+
 /** One block, as a range over the document's words plus the text to align. */
 export type DocumentSegment = {
   start: number;
   end: number;
   /** The text handed to the aligner, with skipped spans already excised. */
   text: string;
+  /** What the block is, so the voice can read it accordingly. */
+  kind: BlockKind;
 };
 
 /** A document, segmented into the blocks it is read in. */
@@ -165,10 +185,14 @@ export const walkDocument = (
   const segments: DocumentSegment[] = [];
   let buffer = "";
   let start = 0;
+  // Text outside any block is prose, so a bare string reads as a paragraph.
+  let kind: BlockKind = "paragraph";
 
   const flush = () => {
     const text = buffer.trim();
-    if (text && words.length > start) segments.push({ start, end: words.length, text });
+    if (text && words.length > start) {
+      segments.push({ start, end: words.length, text, kind });
+    }
     buffer = "";
     start = words.length;
   };
@@ -204,9 +228,12 @@ export const walkDocument = (
         (!!rules.only &&
           (matchesAny(element, rules.only) || flagged(element, "data-spoken")));
 
-    const isBlock =
-      typeof element.type === "string" && BLOCK.has(element.type.toLowerCase());
+    const tag = typeof element.type === "string" ? element.type.toLowerCase() : "";
+    const isBlock = BLOCK.has(tag);
     if (isBlock) flush();
+
+    const outer = kind;
+    kind = KIND_OF[tag] ?? kind;
 
     const kids = element.props.children;
     const walked =
@@ -215,6 +242,7 @@ export const walkDocument = (
         : cloneElement(element, undefined, walk(kids, { spoken, blocked }));
 
     if (isBlock) flush();
+    kind = outer;
     return walked;
   };
 
@@ -242,7 +270,9 @@ export const documentFromText = (text: string): SpokenDocument => {
   return {
     text,
     words,
-    segments: trimmed ? [{ start: 0, end: words.length, text: trimmed }] : [],
+    segments: trimmed
+      ? [{ start: 0, end: words.length, text: trimmed, kind: "paragraph" }]
+      : [],
   };
 };
 
@@ -254,5 +284,5 @@ export const documentSignature = (document: SpokenDocument): string =>
   JSON.stringify([
     document.text,
     document.words,
-    document.segments.map((s) => [s.start, s.end, s.text]),
+    document.segments.map((s) => [s.start, s.end, s.text, s.kind]),
   ]);

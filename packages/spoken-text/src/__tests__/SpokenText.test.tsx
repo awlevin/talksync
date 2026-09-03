@@ -108,7 +108,14 @@ describe("<SpokenText> with a string child", () => {
     words,
     currentWordIndex: 2,
     currentWord: words[2],
-    segments: [{ start: 0, end: words.length, status: "ready" as const }],
+    segments: [
+      {
+        start: 0,
+        end: words.length,
+        kind: "paragraph" as const,
+        status: "ready" as const,
+      },
+    ],
     status: "ready" as const,
     isLoading: false,
     isPlaying: false,
@@ -148,7 +155,7 @@ describe("<SpokenText> with a string child", () => {
 
     await waitFor(() => expect(seen.current?.status).toBe("ready"));
     expect(seen.current?.segments).toEqual([
-      { start: 0, end: 3, status: "ready" },
+      { start: 0, end: 3, kind: "paragraph", status: "ready" },
     ]);
     expect(seen.current?.words.map((w) => [w.text, w.start])).toEqual([
       ["One", 0],

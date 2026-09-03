@@ -113,7 +113,7 @@ export const useSpokenDocument = (
   const requested = useDebounced(doc, debounceMs);
 
   const keys = useMemo(
-    () => requested.segments.map((s) => alignmentKey(endpoint, s.text)),
+    () => requested.segments.map((s) => alignmentKey(endpoint, s.text, s.kind)),
     [requested, endpoint],
   );
 
@@ -161,7 +161,9 @@ export const useSpokenDocument = (
       setLoads((prev) => ({ ...prev, [key]: { status: "loading" } }));
 
       loadAlignment(key, () =>
-        (alignerRef.current ?? createEndpointAligner(endpoint))(segment.text),
+        (alignerRef.current ?? createEndpointAligner(endpoint))(segment.text, {
+          kind: segment.kind,
+        }),
       ).then(
         (alignment) =>
           setLoads((prev) => ({ ...prev, [key]: { status: "ready", alignment } })),
@@ -388,6 +390,7 @@ export const useSpokenDocument = (
       doc.segments.map((s, index) => ({
         start: s.start,
         end: s.end,
+        kind: s.kind,
         status: loadOf(keys[index]).status,
       })),
     [doc, keys, loadOf],
