@@ -547,3 +547,154 @@ describe("<SpokenTextProvider>", () => {
     );
   });
 });
+
+describe("saying what is not on the page", () => {
+  /**
+   * Two blocks, each with words in them that are said and never shown: an
+   * announcement ahead of the heading, and a note in place of the skipped
+   * `<code>` in the middle of the sentence.
+   *
+   * The document's words are, in order: `Section` `1.` `Feeding` `it` /
+   * `Pass` `the` `a` `debounce` `setting` `option.` — of which 0, 1, 6, 7 and 8
+   * are hidden.
+   */
+  const say = {
+    h2: ({ count }: { count: number }) => ({ before: `Section ${count}.` }),
+    code: () => "a debounce setting",
+  };
+
+  const Article = () => (
+    <SpokenText say={say}>
+      <h2>Feeding it</h2>
+      <p>
+        Pass the <code>debounceMs</code> option.
+      </p>
+    </SpokenText>
+  );
+
+  const table = {
+    "Section 1. Feeding it": aligned("Section 1. Feeding it", 2),
+    "Pass the a debounce setting  option.": aligned(
+      "Pass the a debounce setting option.",
+      3,
+    ),
+  };
+
+  it("renders nothing for the words it adds", () => {
+    const { container } = render(<Article />);
+
+    // The page is exactly what was written, and only the words on it are
+    // wrapped — with the indices they have in the document.
+    expect(container.textContent).toBe("Feeding itPass the debounceMs option.");
+    expect(
+      [...container.querySelectorAll("[data-spoken-index]")].map((el) => [
+        el.getAttribute("data-spoken-index"),
+        el.textContent,
+      ]),
+    ).toEqual([
+      ["2", "Feeding"],
+      ["3", "it"],
+      ["4", "Pass"],
+      ["5", "the"],
+      ["9", "option."],
+    ]);
+  });
+
+  it("never hands a hidden word to `renderWord`", () => {
+    const seen: number[] = [];
+    render(
+      <SpokenText
+        say={say}
+        renderWord={(word) => {
+          seen.push(word.index);
+          return word.text;
+        }}
+      >
+        <h2>Feeding it</h2>
+      </SpokenText>,
+    );
+
+    // Deduped, because the loading state renders the heading more than once.
+    expect([...new Set(seen)]).toEqual([2, 3]);
+  });
+
+  it("times the words on the page as if the hidden ones were there", async () => {
+    const seen = held();
+    render(
+      <SpokenTextProvider fetchAlignment={from(table)}>
+        <Capture into={seen} />
+        <Article />
+      </SpokenTextProvider>,
+    );
+
+    await waitFor(() =>
+      expect(seen.current?.segments.map((s) => s.status)).toEqual([
+        "ready",
+        "ready",
+      ]),
+    );
+
+    // The heading is said in one piece, so "Feeding" starts a second in, after
+    // the announcement; and "option." is timed past the note that replaced the
+    // `<code>`, not as if the sentence ran straight on.
+    expect(seen.current?.words.map((w) => [w.text, w.hidden, w.start])).toEqual([
+      ["Section", true, 0],
+      ["1.", true, 0.5],
+      ["Feeding", false, 1],
+      ["it", false, 1.5],
+      ["Pass", false, 2],
+      ["the", false, 2.5],
+      ["a", true, 3],
+      ["debounce", true, 3.5],
+      ["setting", true, 4],
+      ["option.", false, 4.5],
+    ]);
+    expect(seen.current?.text).toBe(
+      "Section 1. Feeding it\n\nPass the a debounce setting  option.",
+    );
+  });
+
+  it("lights nothing on the page while a hidden word is spoken", async () => {
+    const seen = held();
+    const changes: (DisplayWord | undefined)[] = [];
+    const { container } = render(
+      <SpokenTextProvider
+        fetchAlignment={from(table)}
+        onWordChange={(_, word) => changes.push(word)}
+      >
+        <Capture into={seen} />
+        <Article />
+      </SpokenTextProvider>,
+    );
+
+    await waitFor(() =>
+      expect(seen.current?.segments.map((s) => s.status)).toEqual([
+        "ready",
+        "ready",
+      ]),
+    );
+
+    // The note in place of the `<code>`, which is nowhere on the page.
+    act(() => seen.current?.seekToWord(6));
+    await waitFor(() => expect(seen.current?.currentWordIndex).toBe(6));
+    expect(seen.current?.currentWord?.hidden).toBe(true);
+    expect(changes.at(-1)?.index).toBe(6);
+
+    expect(container.querySelector('[data-spoken-state="current"]')).toBeNull();
+    expect(
+      [...container.querySelectorAll("[data-spoken-index]")].map((el) =>
+        el.getAttribute("data-spoken-state"),
+      ),
+    ).toEqual(["past", "past", "past", "past", "future"]);
+
+    // The gap after "the" runs into three hidden words, so it stays dark until
+    // the voice is back on the page. The band is otherwise unbroken.
+    expect(
+      [...container.querySelectorAll("[data-spoken-state]")]
+        .filter((el) => !el.hasAttribute("data-spoken-index"))
+        .map((el) => el.getAttribute("data-spoken-state")),
+    ).toEqual(["past", "past", "future"]);
+
+    act(() => seen.current?.pause());
+  });
+});

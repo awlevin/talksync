@@ -15,6 +15,7 @@ import {
   documentFromText,
   renderLeaf,
   walkDocument,
+  type SayRule,
   type SpokenSelector,
 } from "./document.js";
 import { SpokenTextContext } from "./SpokenTextProvider.js";
@@ -73,6 +74,12 @@ export type SpokenTextProps = SpokenTextOptions & {
   skip?: readonly SpokenSelector[];
   /** Speak only these parts of the tree. Unset means all of it. */
   only?: readonly SpokenSelector[];
+  /**
+   * Words to say that are not on the page: an announcement before a heading, an
+   * image's alt text, a note in place of something skipped. Keys select the
+   * same way `skip` does, and the first one that matches an element wins.
+   */
+  say?: Record<string, SayRule>;
 };
 
 const ROOT_STYLE: CSSProperties = { whiteSpace: "pre-wrap" };
@@ -131,6 +138,7 @@ export const SpokenText = ({
   seekOnWordClick = true,
   skip = DEFAULT_SKIP,
   only,
+  say,
   endpoint,
   fetchAlignment,
   onWordChange,
@@ -145,9 +153,9 @@ export const SpokenText = ({
   const walked = useMemo(
     () =>
       isTree
-        ? collectDocument(children, { skip, only })
+        ? collectDocument(children, { skip, only, say })
         : documentFromText(typeof children === "string" ? children : ""),
-    [children, isTree, skip, only],
+    [children, isTree, skip, only, say],
   );
   const document = useStableDocument(walked);
 
@@ -206,10 +214,13 @@ export const SpokenText = ({
    * plays from there. A word left untimed inside a block that did load is
    * neither.
    *
-   * `opensBlock`: the first word of each block. The whitespace before it
-   * belongs to the page rather than to a sentence, so the band stops there.
+   * `bandTo`: the word each gap runs to, or `-1` for a gap the band never
+   * crosses. It stops at the first word of a block, because the whitespace
+   * there belongs to the page rather than to a sentence, and it steps over
+   * words that are said but not shown, so a gap in front of one waits for the
+   * voice to come back to the page rather than lighting up over nothing.
    */
-  const { unfetched, opensBlock } = useMemo(() => {
+  const { unfetched, bandTo } = useMemo(() => {
     const count = controller.words.length;
     const unfetched = new Uint8Array(count);
     const opensBlock = new Uint8Array(count);
@@ -219,8 +230,19 @@ export const SpokenText = ({
       }
       if (segment.start < count) opensBlock[segment.start] = 1;
     }
-    return { unfetched, opensBlock };
-  }, [controller.words.length, controller.segments]);
+
+    const bandTo = new Int32Array(count).fill(-1);
+    for (let index = count - 2; index >= 0; index -= 1) {
+      const next = index + 1;
+      bandTo[index] =
+        opensBlock[next] === 1
+          ? -1
+          : controller.words[next].hidden
+            ? bandTo[next]
+            : next;
+    }
+    return { unfetched, bandTo };
+  }, [controller.words, controller.segments]);
 
   const spoken = (text: string, index: number): ReactNode => {
     const word: DisplayWord = controller.words[index] ?? {
@@ -263,9 +285,8 @@ export const SpokenText = ({
   const spacing = (text: string, index: number): ReactNode => {
     if (!text) return text;
 
-    const next = controller.words[index + 1];
-    const lit =
-      !!next && next.state !== "future" && opensBlock[index + 1] !== 1;
+    const target = bandTo[index] ?? -1;
+    const lit = target !== -1 && controller.words[target].state !== "future";
 
     return (
       <span
@@ -291,7 +312,7 @@ export const SpokenText = ({
   return (
     <Tag className={className} style={rootStyle}>
       {isTree
-        ? walkDocument(children, { skip, only }, spoken, spacing).node
+        ? walkDocument(children, { skip, only, say }, spoken, spacing).node
         : renderLeaf(controller.text, 0, spoken, spacing)}
     </Tag>
   );

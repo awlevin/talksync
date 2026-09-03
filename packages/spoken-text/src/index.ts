@@ -25,7 +25,12 @@ export type { SpokenTextProviderProps } from "./SpokenTextProvider.js";
 export { useSpokenText } from "./useSpokenText.js";
 
 export { DEFAULT_SKIP } from "./document.js";
-export type { SpokenSelector } from "./document.js";
+export type {
+  SayInfo,
+  SayResult,
+  SayRule,
+  SpokenSelector,
+} from "./document.js";
 
 export { createEndpointAligner, DEFAULT_ENDPOINT } from "./fetchAlignment.js";
 export { clearAlignmentCache } from "./alignmentCache.js";
