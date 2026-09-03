@@ -208,6 +208,55 @@
     animation: tw-breathe 1.3s ease-in-out infinite;
   }
 
+  /* The docs are read at article length, so they take the article's measure
+     and colour: prose in the reading face, and ink kept for the words that
+     have earned it. */
+  .docs {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: hsl(var(--ink-2));
+  }
+  @media (min-width: 640px) {
+    .docs {
+      font-size: 1.125rem;
+    }
+  }
+
+  /* The docs restyle the player through the component's own `classNames`,
+     which is the same escape hatch the styling page documents. The button is
+     smaller than the article's, and the bar keeps its height whether or not
+     the status line has anything to say. */
+  /* Two rows, always: the controls, and a line kept free for the status even
+     while there is nothing to report. The bar is sticky, so a status arriving
+     mid-scroll must not move the prose under it. */
+  .docs-player {
+    display: grid;
+    grid-template-rows: auto 0.9rem;
+    align-content: center;
+  }
+  .docs-player-button {
+    display: flex;
+    height: 2.25rem;
+    width: 2.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid hsl(var(--rule));
+    border-radius: 999px;
+    color: hsl(var(--ink));
+    transition:
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+  .docs-player-button:hover:not(:disabled) {
+    border-color: hsl(var(--accent));
+    color: hsl(var(--accent));
+  }
+  .docs-player-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
   .code {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.75rem;
