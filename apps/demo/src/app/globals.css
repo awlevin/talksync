@@ -159,11 +159,11 @@
   }
 
   /* Every block of prose on the page can be spoken, and the affordance stays
-     out of the way: the text reads as text until the cursor is on a word. */
+     out of the way: the text reads as text until the cursor is on a word.
+     Nothing here is padded or rounded: the package paints the gaps between the
+     words too, and a box that overlapped one would double the colour into a
+     seam at every junction. */
   .tw {
-    border-radius: 2px;
-    margin: 0 -0.1em;
-    padding: 0 0.1em;
     cursor: pointer;
     transition:
       background-color 160ms ease,
@@ -173,24 +173,24 @@
   @media (hover: hover) {
     .tw:hover {
       background-color: hsl(var(--lit) / 0.32);
+      border-radius: 2px;
     }
   }
   .tw-past {
     background-color: var(--spoken-text-past);
   }
+  /* The one box in the band that should read as distinct. */
   .tw-current {
     background-color: var(--spoken-text-current);
     box-shadow: inset 0 -0.12em 0 var(--spoken-text-accent);
+    border-radius: 2px;
   }
-  /* A name inside a spoken passage still reads as a name. The smaller mono box
-     is shorter than the serif one it sits among, so a highlight running across
-     the two would step up and down. Padding an inline box vertically paints
-     without moving the line, so the band comes out level. */
+  /* A name inside a spoken passage still reads as a name. It is set inside the
+     word rather than on it, so the band keeps the height of the page's own
+     face and a mono name does not raise or shorten it. */
   .tw-code {
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 0.8125rem;
-    padding-top: 0.385em;
-    padding-bottom: 0.077em;
   }
   /* The one moment the passage is not silent about itself: audio is coming. */
   .tw-waiting {

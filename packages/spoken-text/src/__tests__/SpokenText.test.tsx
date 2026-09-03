@@ -51,43 +51,63 @@ const held = () => ({ current: undefined as SpokenTextController | undefined });
 beforeEach(clearAlignmentCache);
 
 describe("<SpokenText> with a string child", () => {
-  /** Exactly the markup this component rendered before it learned to walk a tree. */
-  const Legacy = ({ speech }: { speech: SpokenTextController }) => {
+  /**
+   * The markup this component renders, written out by hand: a word span and a
+   * separator span per word, and the band carried across the gap between two
+   * words that have both been reached.
+   */
+  const ByHand = ({ speech }: { speech: SpokenTextController }) => {
     const { lead, separators } = tokenize(speech.text);
+    const past = {
+      backgroundColor: "var(--spoken-text-past, rgba(240, 199, 116, 0.4))",
+    };
     return (
       <p style={{ whiteSpace: "pre-wrap" }}>
         {lead}
-        {speech.words.map((word) => (
-          <span key={word.index}>
-            <span
-              data-spoken-state={word.state}
-              data-spoken-index={word.index}
-              style={{
-                borderRadius: "2px",
-                margin: "0 -0.05em",
-                padding: "0 0.05em",
-                transition: "background-color 200ms ease, box-shadow 200ms ease",
-                ...(word.state === "past"
-                  ? {
-                      backgroundColor:
-                        "var(--spoken-text-past, rgba(240, 199, 116, 0.4))",
-                    }
-                  : word.state === "current"
-                    ? {
-                        backgroundColor:
-                          "var(--spoken-text-current, rgb(240, 199, 116))",
-                        boxShadow:
-                          "inset 0 -0.12em 0 var(--spoken-text-accent, rgb(164, 76, 46))",
-                      }
-                    : undefined),
-                ...(word.seekable ? { cursor: "pointer" } : undefined),
-              }}
-            >
-              {word.text}
+        {speech.words.map((word) => {
+          const gap = separators[word.index] ?? "";
+          const next = speech.words[word.index + 1];
+          const lit = !!next && next.state !== "future";
+          return (
+            <span key={word.index}>
+              <span
+                data-spoken-state={word.state}
+                data-spoken-index={word.index}
+                style={{
+                  transition:
+                    "background-color 200ms ease, box-shadow 200ms ease",
+                  ...(word.state === "past"
+                    ? past
+                    : word.state === "current"
+                      ? {
+                          backgroundColor:
+                            "var(--spoken-text-current, rgb(240, 199, 116))",
+                          boxShadow:
+                            "inset 0 -0.12em 0 var(--spoken-text-accent, rgb(164, 76, 46))",
+                          borderRadius: "2px",
+                        }
+                      : undefined),
+                  ...(word.seekable ? { cursor: "pointer" } : undefined),
+                }}
+              >
+                {word.text}
+              </span>
+              {gap ? (
+                <span
+                  data-spoken-state={lit ? "past" : "future"}
+                  style={{
+                    transition: "background-color 200ms ease",
+                    ...(lit ? past : undefined),
+                  }}
+                >
+                  {gap}
+                </span>
+              ) : (
+                gap
+              )}
             </span>
-            {separators[word.index] ?? ""}
-          </span>
-        ))}
+          );
+        })}
       </p>
     );
   };
@@ -133,10 +153,29 @@ describe("<SpokenText> with a string child", () => {
     getAudioElement: () => null,
   } satisfies SpokenTextController;
 
-  it("renders exactly what it rendered before", () => {
+  it("renders one band across the words and the gaps between them", () => {
     const now = render(<SpokenText speech={speech} />).container.innerHTML;
-    const before = render(<Legacy speech={speech} />).container.innerHTML;
-    expect(now).toBe(before);
+    const expected = render(<ByHand speech={speech} />).container.innerHTML;
+    expect(now).toBe(expected);
+  });
+
+  it("lights the gaps up to the current word and no further", () => {
+    const { container } = render(<SpokenText speech={speech} />);
+    const gaps = [...container.querySelectorAll("[data-spoken-state]")].filter(
+      (el) => !el.hasAttribute("data-spoken-index"),
+    );
+
+    // Words 0 and 1 are past and word 2 is current, so the two gaps before it
+    // are lit and every gap after it is not.
+    expect(gaps.map((el) => el.getAttribute("data-spoken-state"))).toEqual([
+      "past",
+      "past",
+      "future",
+      "future",
+      "future",
+      "future",
+      "future",
+    ]);
   });
 
   it("puts the passage back together byte for byte", () => {

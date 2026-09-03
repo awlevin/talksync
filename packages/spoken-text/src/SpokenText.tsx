@@ -35,6 +35,11 @@ export type SpokenTextClassNames = {
   current?: string;
   /** Applied to words not yet spoken. */
   future?: string;
+  /**
+   * Applied to the whitespace between two words, which carries the band from
+   * one to the next. It is marked `data-spoken-state="past"` while it is lit.
+   */
+  separator?: string;
 };
 
 export type SpokenTextProps = SpokenTextOptions & {
@@ -51,8 +56,9 @@ export type SpokenTextProps = SpokenTextOptions & {
   className?: string;
   style?: CSSProperties;
   /**
-   * Per-word classes. Supplying one replaces the built-in look for that slot,
-   * so Tailwind or CSS Modules classes are not fighting inline styles.
+   * Classes for the words and the gaps between them. Supplying one replaces
+   * the built-in look for that slot, so Tailwind or CSS Modules classes are
+   * not fighting inline styles.
    */
   classNames?: SpokenTextClassNames;
   /** Take over word rendering entirely. Whitespace is still inserted for you. */
@@ -71,18 +77,33 @@ export type SpokenTextProps = SpokenTextOptions & {
 
 const ROOT_STYLE: CSSProperties = { whiteSpace: "pre-wrap" };
 
+/**
+ * The highlight is a band, not a row of tiles.
+ *
+ * The words carry it and so does the whitespace between them, and no box is
+ * rounded, padded or overlapped on the way: the past colour is meant to be
+ * semi-transparent, so two boxes sharing a millimetre would double it into a
+ * seam at every junction, and a rounded corner would notch it. Only the word
+ * being spoken is a box of its own.
+ */
 const WORD_STYLE: CSSProperties = {
-  borderRadius: "2px",
-  margin: "0 -0.05em",
-  padding: "0 0.05em",
   transition: "background-color 200ms ease, box-shadow 200ms ease",
 };
 
+const SEPARATOR_STYLE: CSSProperties = {
+  transition: "background-color 200ms ease",
+};
+
+const PAST_STYLE: CSSProperties = {
+  backgroundColor: "var(--spoken-text-past, rgba(240, 199, 116, 0.4))",
+};
+
 const STATE_STYLE: Record<WordState, CSSProperties | undefined> = {
-  past: { backgroundColor: "var(--spoken-text-past, rgba(240, 199, 116, 0.4))" },
+  past: PAST_STYLE,
   current: {
     backgroundColor: "var(--spoken-text-current, rgb(240, 199, 116))",
     boxShadow: "inset 0 -0.12em 0 var(--spoken-text-accent, rgb(164, 76, 46))",
+    borderRadius: "2px",
   },
   future: undefined,
 };
@@ -174,16 +195,25 @@ export const SpokenText = ({
   }, [currentWordIndex]);
 
   /**
-   * A word is worth clicking when it has a timestamp, and also when its block
-   * has not been fetched: clicking one of those fetches it and plays from
-   * there. A word left untimed inside a block that did load is neither.
+   * `unfetched`: a word is worth clicking when it has a timestamp, and also
+   * when its block has not been fetched — clicking one of those fetches it and
+   * plays from there. A word left untimed inside a block that did load is
+   * neither.
+   *
+   * `opensBlock`: the first word of each block. The whitespace before it
+   * belongs to the page rather than to a sentence, so the band stops there.
    */
-  const unfetched = useMemo(() => {
-    const flags = new Uint8Array(controller.words.length);
+  const { unfetched, opensBlock } = useMemo(() => {
+    const count = controller.words.length;
+    const unfetched = new Uint8Array(count);
+    const opensBlock = new Uint8Array(count);
     for (const segment of controller.segments) {
-      if (segment.status !== "ready") flags.fill(1, segment.start, segment.end);
+      if (segment.status !== "ready") {
+        unfetched.fill(1, segment.start, segment.end);
+      }
+      if (segment.start < count) opensBlock[segment.start] = 1;
     }
-    return flags;
+    return { unfetched, opensBlock };
   }, [controller.words.length, controller.segments]);
 
   const spoken = (text: string, index: number): ReactNode => {
@@ -219,6 +249,33 @@ export const SpokenText = ({
     );
   };
 
+  /**
+   * The gap after a word. It takes the past colour as soon as the word on the
+   * far side of it has been reached, so the band runs unbroken from the first
+   * word up to and including the one being spoken, and stops there.
+   */
+  const spacing = (text: string, index: number): ReactNode => {
+    if (!text) return text;
+
+    const next = controller.words[index + 1];
+    const lit =
+      !!next && next.state !== "future" && opensBlock[index + 1] !== 1;
+
+    return (
+      <span
+        className={classNames?.separator}
+        data-spoken-state={lit ? "past" : "future"}
+        style={
+          classNames?.separator
+            ? undefined
+            : { ...SEPARATOR_STYLE, ...(lit ? PAST_STYLE : undefined) }
+        }
+      >
+        {text}
+      </span>
+    );
+  };
+
   const Tag = as ?? (isTree ? "div" : "p");
 
   // A tree keeps its own whitespace rules; a passage is one string, so its
@@ -228,8 +285,8 @@ export const SpokenText = ({
   return (
     <Tag className={className} style={rootStyle}>
       {isTree
-        ? walkDocument(children, { skip, only }, spoken).node
-        : renderLeaf(controller.text, 0, spoken)}
+        ? walkDocument(children, { skip, only }, spoken, spacing).node
+        : renderLeaf(controller.text, 0, spoken, spacing)}
     </Tag>
   );
 };

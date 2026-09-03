@@ -97,6 +97,13 @@ export const EMPTY_DOCUMENT: SpokenDocument = {
 /** Render one spoken word. `index` is its position in the whole document. */
 export type RenderSpokenWord = (word: string, index: number) => ReactNode;
 
+/**
+ * Render the whitespace that follows the word at `index`. It carries the
+ * highlight between two lit words, so the band is one stripe rather than a row
+ * of tiles.
+ */
+export type RenderSeparator = (separator: string, index: number) => ReactNode;
+
 export type SpokenRules = {
   skip?: readonly SpokenSelector[];
   /** Unset means the whole tree is in the field. */
@@ -146,6 +153,7 @@ export const renderLeaf = (
   text: string,
   firstIndex: number,
   renderWord: RenderSpokenWord,
+  renderSeparator?: RenderSeparator,
 ): ReactNode => {
   const { lead, words, separators } = tokenize(text);
   return (
@@ -154,7 +162,9 @@ export const renderLeaf = (
       {words.map((word, i) => (
         <span key={firstIndex + i}>
           {renderWord(word, firstIndex + i)}
-          {separators[i]}
+          {renderSeparator
+            ? renderSeparator(separators[i], firstIndex + i)
+            : separators[i]}
         </span>
       ))}
     </>
@@ -180,6 +190,7 @@ export const walkDocument = (
   children: ReactNode,
   rules: SpokenRules,
   renderWord: RenderSpokenWord | null,
+  renderSeparator?: RenderSeparator,
 ): WalkedDocument => {
   const words: string[] = [];
   const segments: DocumentSegment[] = [];
@@ -205,7 +216,9 @@ export const walkDocument = (
 
     const first = words.length;
     words.push(...tokens);
-    return renderWord ? renderLeaf(text, first, renderWord) : text;
+    return renderWord
+      ? renderLeaf(text, first, renderWord, renderSeparator)
+      : text;
   };
 
   const walk = (node: ReactNode, field: Field): ReactNode => {
