@@ -236,7 +236,10 @@ export const Talkable = ({
     .join(" ");
 
   // Words that carry a name have to be set in the mono face, and `classNames`
-  // cannot reach a single word, so those passages render their own spans.
+  // cannot reach a single word, so those passages render their own spans. The
+  // mono face goes on a span inside the word, never on the word itself: the
+  // highlight is painted on the word box, and a box in a smaller face would sit
+  // a little lower and a little shorter than the prose either side of it.
   return codeWords.size > 0 ? (
     <SpokenText
       as={as}
@@ -244,16 +247,16 @@ export const Talkable = ({
       speech={controller}
       renderWord={(word) => (
         <span
-          className={
-            codeWords.has(bare(word.text))
-              ? `${STATE_CLASS[word.state]} tw-code`
-              : STATE_CLASS[word.state]
-          }
+          className={STATE_CLASS[word.state]}
           data-spoken-state={word.state}
           data-spoken-index={word.index}
           onClick={() => speak(word.index)}
         >
-          {word.text}
+          {codeWords.has(bare(word.text)) ? (
+            <span className="tw-code">{word.text}</span>
+          ) : (
+            word.text
+          )}
         </span>
       )}
     />

@@ -98,9 +98,9 @@ word is being spoken, so you can build whatever UI you like on top of it.
 
 ### Leaving things unspoken
 
-`useSpokenText(text, { debounceMs: 900 })` read aloud as prose is noise, and it
-would wreck the alignment besides. So `code`, `pre`, `kbd`, `samp`, `var`,
-`script`, `style`, `svg`, `canvas`, `iframe` and `math` are skipped by default.
+Code read aloud as prose is noise, and it would wreck the alignment besides. So
+`code`, `pre`, `kbd`, `samp`, `var`, `script`, `style`, `svg`, `canvas`,
+`iframe` and `math` are skipped by default.
 
 Skipped content still renders, untouched, exactly where it is. It is dropped
 only from the text handed to the aligner, so an inline `<code>` in the middle of
@@ -131,7 +131,7 @@ Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
 | `only`            | `(string \| ((el) => boolean))[]`             |                        | Speak only these parts of the tree. Unset means all of it.                                  |
 | `as`              | `"p" \| "div" \| "span" \| …`                | `"div"` / `"p"`        | Element it renders into: `div` for a tree, `p` for a string.                                |
 | `className`       | `string`                                      |                        | Class on that element.                                                                      |
-| `classNames`      | `{ word, past, current, future }`             |                        | Per-word classes. Setting one drops the built-in look for that slot, so your CSS wins.      |
+| `classNames`      | `{ word, past, current, future, separator }`  |                        | Classes for the words and for the gaps between them. Setting one drops the built-in look for that slot, so your CSS wins. |
 | `renderWord`      | `(word: DisplayWord) => ReactNode`            |                        | Render words yourself. Whitespace is still inserted for you.                                |
 | `seekOnWordClick` | `boolean`                                     | `true`                 | Click a word to play from there, fetching its block if it has not been asked for.           |
 | `endpoint`        | `string`                                      | `"/api/transcription"` | Route that turns text into audio and timings.                                               |
@@ -142,13 +142,17 @@ Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
 
 Every word also carries `data-spoken-state="past" | "current" | "future"` and
 `data-spoken-index`, so plain CSS can style the highlight without any props.
+The whitespace between two words is a span of its own, carrying the same
+`data-spoken-state`: it is lit once the word after it has been reached, so the
+highlight is one continuous band rather than a row of boxes.
 
 ### `<SpokenTextProvider>`
 
 Takes the same options as the hook (`endpoint`, `fetchAlignment`,
 `onWordChange`, `debounceMs`, `autoPlay`) and applies them to the whole
-document. `useSpokenTextController()` returns the controller it is holding, for
-building a player of your own.
+document. Anything written on the `<SpokenText>` inside it wins, so a
+`debounceMs` can sit next to the text it is about. `useSpokenTextController()`
+returns the controller it is holding, for building a player of your own.
 
 ### `<Player>`
 
