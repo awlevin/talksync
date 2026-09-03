@@ -1,0 +1,143 @@
+export const metadata = {
+  title: "Getting started · spoken-text",
+  description:
+    "Install spoken-text, mount the alignment route, and hear a passage read back with every word lit as it is spoken.",
+};
+
+# Getting started
+
+Install the package, mount one route, write one component. Five minutes, end to
+end, and at the end of it a paragraph reads itself aloud and lights every word
+at the moment it is said.
+
+## Install
+
+```bash
+npm install spoken-text
+```
+
+React 18 or 19 is the only requirement. No icon library, no data-fetching
+library, nothing else.
+
+## Mount the route
+
+`<SpokenText>` posts a passage to `/api/transcription` and expects audio and
+word-level timings back. Mounting that route is the other half of the package,
+and it is one export.
+
+```ts
+// app/api/transcription/route.ts
+import {
+  createAlignmentHandler,
+  elevenlabsSpeech,
+  vercelBlobCache,
+} from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: elevenlabsSpeech(),
+  cache: vercelBlobCache(),
+});
+```
+
+That is the whole route. ElevenLabs returns the audio and a timestamp for every
+character of the text in one call, so there is nothing to transcribe and
+nothing to drift: the timings are the model's own record of what it said.
+
+`elevenlabsSpeech` needs `ELEVENLABS_API_KEY` (or `ELEVEN_LABS_API_KEY`) in the
+environment, or an `apiKey` passed to it. It defaults to George, a premade
+voice. Premade voices work on every plan, including the free tier; the voice
+library needs a paid one.
+
+`vercelBlobCache` needs `BLOB_READ_WRITE_TOKEN`. Leave `cache` out for a first
+look and every request regenerates the audio and hands it back inline as a
+`data:` URL, which is fine once and wrong every time after that.
+
+### With OpenAI instead
+
+`tts-1` hands back an MP3 and nothing else, so it needs `whisper-1` to read the
+timings back off the recording. Two model calls rather than one, and the two
+can disagree about what was said.
+
+```ts
+// app/api/transcription/route.ts
+import {
+  createAlignmentHandler,
+  openaiSpeech,
+  openaiTranscription,
+  vercelBlobCache,
+} from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: openaiSpeech({ model: "gpt-4o-mini-tts", voice: "nova" }),
+  transcribe: openaiTranscription({ model: "whisper-1", language: "en" }),
+  cache: vercelBlobCache(),
+});
+```
+
+Both read `OPENAI_API_KEY`, and both need `ai` and `@ai-sdk/openai` installed.
+They are optional peer dependencies, so nothing is pulled in on your behalf.
+
+`createAlignmentHandler` returns a plain `(Request) => Promise<Response>`, so
+it mounts in a Next.js route handler, a Hono route, a Deno server: anywhere the
+web standard is spoken. [The route](/docs/server) is the whole story.
+
+## Your first `<SpokenText>`
+
+```tsx
+import { SpokenText } from "spoken-text";
+
+<SpokenText>Any text you like.</SpokenText>;
+```
+
+That is the whole thing. The passage goes to the route, comes back as audio
+with word-level timings, and each word lights at the moment it is spoken. Click
+any word to hear the passage from there.
+
+There is no play button in that snippet because there does not have to be one:
+the text is the control.
+
+## Add a player
+
+When you do want a play button and a scrubber, `<SpokenTextProvider>` holds the
+controller, so the two do not have to be siblings:
+
+```tsx
+import { Player, SpokenText, SpokenTextProvider } from "spoken-text";
+
+export default function Reader() {
+  return (
+    <SpokenTextProvider>
+      <header className="sticky top-0">
+        <Player />
+      </header>
+
+      <SpokenText>Any text you like.</SpokenText>
+    </SpokenTextProvider>
+  );
+}
+```
+
+One document per provider. The page you are reading is built this way: the
+player at the top of this column is driving the prose below it.
+
+Without a provider, `<SpokenText>` manages itself, and `<Player>` takes a
+`speech` prop:
+
+```tsx
+import { Player, SpokenText, useSpokenText } from "spoken-text";
+
+function Reader({ text }: { text: string }) {
+  const speech = useSpokenText(text);
+  return (
+    <>
+      <SpokenText speech={speech} />
+      <Player speech={speech} />
+    </>
+  );
+}
+```
+
+`useSpokenText` on its own is headless. It owns the audio and reports which
+word is being spoken, so you can build whatever UI you like on top of it.
+
+That is a passage. The next page hands it a whole page of elements instead.

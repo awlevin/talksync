@@ -1,0 +1,203 @@
+export const metadata = {
+  title: "Reading a whole document · spoken-text",
+  description:
+    "Hand <SpokenText> a tree of elements and it reads the lot: block segmentation, lazy loading, skip and only, block kinds, and saying what is not written on the page.",
+};
+
+import { Prop, Props } from "@/components/Props";
+
+# Reading a whole document
+
+Hand `<SpokenText>` elements instead of a string and it reads the lot:
+
+```tsx
+<SpokenText>
+  <h2>What is living in there</h2>
+  <p>Wild yeasts eat the sugars in the flour…</p>
+  <h2>Feeding it</h2>
+  <p>One part starter, five parts flour, five parts water…</p>
+</SpokenText>
+```
+
+The structure is kept. An `h2` stays an `h2`, a link stays a link, a class
+stays where it was written; only the text leaves are replaced, by a span per
+word. Nothing about the page changes except that it can now be read to you.
+
+[An article, read end to end](/article) is the whole pattern running.
+
+## One block at a time
+
+Each heading, paragraph, list item and blockquote is its **own** alignment
+request. That is what makes a long page possible rather than merely slow:
+
+- Each block caches on its own, so editing one paragraph does not reprice the
+  page.
+- The first block is fetched on mount, and the next is warmed while the current
+  one plays.
+- Clicking a word in a block nobody has asked for yet fetches that block and
+  starts there.
+
+`currentWordIndex` is one number across the whole document, and `segments` says
+where each block begins and ends, so a table of contents or a progress bar can
+be built from it. Until every block has landed, `duration` counts the rest at a
+reading pace and `durationIsEstimate` says so, which is why `<Player>` shows
+the total dimmed and marked with a tilde: `~1:42`.
+
+A string is a document with one block, so nothing about a single passage
+changes.
+
+## A player anywhere on the page
+
+`<SpokenTextProvider>` holds the controller, so the play button does not have
+to be a sibling of the text:
+
+```tsx
+import { Player, SpokenText, SpokenTextProvider } from "spoken-text";
+
+<SpokenTextProvider>
+  <header className="sticky top-0">
+    <Player />
+  </header>
+
+  <article>
+    <SpokenText>{/* the whole document */}</SpokenText>
+  </article>
+</SpokenTextProvider>;
+```
+
+One document per provider. It takes the same options as the hook and applies
+them to the whole document, and anything written on the `<SpokenText>` inside
+it wins, so a `debounceMs` can sit next to the text it is about.
+`useSpokenTextController()` returns the controller it is holding, for building
+a player of your own.
+
+## Leaving things unspoken
+
+Code read aloud as prose is noise, and it would wreck the alignment besides. So
+`code`, `pre`, `kbd`, `samp`, `var`, `script`, `style`, `svg`, `canvas`,
+`iframe` and `math` are skipped by default.
+
+Skipped content still renders, untouched, exactly where it is. It is dropped
+only from the text handed to the aligner, so an inline `<code>` in the middle
+of a sentence leaves a gap in what is said and the words on either side stay
+correctly timed.
+
+```tsx
+<SpokenText skip={["code", "pre", "figcaption", ".footnote"]}>…</SpokenText>
+<SpokenText skip={(el) => el.type === "aside"}>…</SpokenText>
+<SpokenText only={[".prose"]}>…</SpokenText>
+```
+
+Both props take an array of selectors: a tag (`"pre"`), a class
+(`".footnote"`), an attribute (`"[aria-hidden]"`), or a predicate over the
+React element. `only` fences the field; `skip` cuts inside it.
+
+Per element, `data-spoken` and `data-spoken-skip` do the same job at the point
+of authorship, which is what you want in MDX. The reference tables in these
+docs are marked that way: a list of type signatures read aloud is noise.
+
+Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
+
+## The component boundary
+
+React children are opaque until they are rendered, so the walk sees the
+elements you hand it and nothing inside a component of your own.
+
+```tsx
+// Reads nothing: MyArticle is a closed box.
+<SpokenText>
+  <MyArticle />
+</SpokenText>
+```
+
+MDX output is fine, because MDX hands you real `h2` and `p` elements. So are
+hand-written pages. This one is MDX, and the player at the top of the column is
+reading it.
+
+## What each block is
+
+Every block says what it is, so a voice can read a title like a title. The
+client sends `{ content, kind }`, where `kind` is `"heading"`, `"paragraph"`,
+`"list"` or `"quote"`, and the handler passes it on to the speech adapter.
+
+Headings are `h1`–`h6`, list items are `li`, quotes are `blockquote`, and
+everything else is a paragraph. A block that does not say what it is, a `p` or
+a `div`, keeps the kind it sits inside, so the paragraph markdown puts inside a
+blockquote is still read as a quote.
+
+`kind` is part of the cache key, so the same words as a heading and as a
+paragraph are two recordings. It is reported back on the client as
+`segments[].kind`, and it reaches the request body of your own
+`fetchAlignment` too.
+
+## Saying what is not on the page
+
+Some of what a listener wants to hear was never written down: which section
+this is, what the picture shows, that a code sample went by unread. `say` puts
+those words into the audio without putting them on the page.
+
+```tsx
+<SpokenText
+  say={{
+    h2: ({ count }) => ({ before: `Section ${count}.` }),
+    pre: () => "A short code sample, skipped.",
+    svg: ({ element }) => `A drawing. ${element.props["aria-label"]}`,
+  }}
+>
+  …
+</SpokenText>
+```
+
+Keys select the way `skip` does: a tag, a `.class`, an `[attr]`. The first key
+that matches an element wins. A rule is handed that element and what it says
+on its own:
+
+<Props data-spoken-skip>
+  <Prop name="text" type="string">
+    The element's own spoken text, after `skip` and `only` have had their say,
+    and `""` for an element that is skipped.
+  </Prop>
+  <Prop name="element" type="ReactElement">
+    The element itself, which is where an `alt` or an `aria-label` lives.
+  </Prop>
+  <Prop name="count" type="number">
+    How many elements this same rule has matched so far, 1-based and in
+    document order. It is what lets the headings number themselves.
+  </Prop>
+  <Prop name="kind" type="BlockKind">
+    What the block is: `"heading"`, `"paragraph"`, `"list"` or `"quote"`.
+  </Prop>
+</Props>
+
+`{ before }` and `{ after }` keep the element's own words and speak around
+them. A plain string **replaces** them. Returning nothing at all changes
+nothing, so a rule can decide case by case.
+
+Which of the two to reach for follows from that. Wrap a heading, do not replace
+it: the heading's own words have to stay in the word list or the heading will
+never light up as it is read. The string form is for elements that were not
+going to be spoken anyway.
+
+```tsx
+h2: ({ count }) => ({ before: `Section ${count}.` }),   // wraps: still lights
+h2: ({ text, count }) => `Section ${count}. ${text}`,   // replaces: never does
+```
+
+A rule on something **skipped** speaks in its place, which is the one way
+skipped content gets a voice. The `pre` above still renders where it was
+written, still unread, and the listener hears a sentence saying it went by.
+
+A rule only reaches what is being spoken. Set an `only` fence and an element
+outside it stays silent, rule or no rule.
+
+The words a rule adds are hidden words. They go into the document's word list
+and into the text handed to the aligner, at the point the element sits, so
+everything around them stays exactly timed, and `<SpokenText>` renders nothing
+for them. While one is being spoken, `currentWordIndex` points at it, no word
+on the page is `current`, and the band waits rather than lighting up over
+nothing. `DisplayWord.hidden` is how you tell them apart, and `SayInfo`,
+`SayResult` and `SayRule` are exported for writing rules of your own.
+
+All three forms are running on [the article](/article): its sections number
+themselves, its code sample announces that it was skipped, and its drawing is
+read out of its `aria-label`.

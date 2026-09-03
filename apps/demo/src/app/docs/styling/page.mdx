@@ -1,0 +1,217 @@
+export const metadata = {
+  title: "Styling the highlight · spoken-text",
+  description:
+    "Classes, data attributes and three CSS variables for the spoken-text highlight, plus renderWord and the Player's own classNames.",
+};
+
+import { Prop, Props } from "@/components/Props";
+
+# Styling the highlight
+
+Out of the box a spoken word is lit, the words behind it are washed, and the
+gap between two lit words is lit as well, so the highlight reads as one band
+rather than a row of boxes. There are three ways to change that, and they layer:
+CSS variables, then your own classes, then rendering the word yourself.
+
+The page you are reading is the first two of them. The band under these words
+is the site's own colour, and the player at the top of this column is wearing
+the site's own classes.
+
+## The three variables
+
+The quickest change is a colour. `<SpokenText>` paints its built-in highlight
+from three custom properties, so setting them anywhere above the text is
+enough:
+
+```text
+--spoken-text-past
+--spoken-text-current
+--spoken-text-accent
+```
+
+`past` is the wash behind everything already said, `current` is the word being
+said, and `accent` is the rule under it. This site sets all three in one place,
+once, for both themes:
+
+```css
+:root {
+  --spoken-text-past: hsl(202 84% 70% / 0.42);
+  --spoken-text-current: hsl(202 84% 70%);
+  --spoken-text-accent: hsl(209 68% 37%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --spoken-text-past: hsl(200 78% 62% / 0.16);
+    --spoken-text-current: hsl(200 78% 62% / 0.40);
+    --spoken-text-accent: hsl(203 86% 74%);
+  }
+}
+```
+
+Light text sits on a dark ground, so the dark values are a wash rather than a
+block. Nothing else about the highlight changes.
+
+## `classNames`
+
+For anything past a colour, take the styling over. `classNames` puts your class
+on each part of a word, and supplying one **drops the built-in look for that
+slot**, so your CSS is not fighting an inline style.
+
+<Props data-spoken-skip>
+  <Prop name="word" type="string">
+    Every word, in every state. The place for the cursor, the transition and
+    the hover.
+  </Prop>
+  <Prop name="past" type="string">
+    Added to a word already spoken.
+  </Prop>
+  <Prop name="current" type="string">
+    Added to the word being spoken.
+  </Prop>
+  <Prop name="future" type="string">
+    Added to a word not yet spoken.
+  </Prop>
+  <Prop name="separator" type="string">
+    The whitespace between two words. It carries the same state as the word
+    after it, which is what turns a row of boxes into one continuous band.
+  </Prop>
+</Props>
+
+```tsx
+<SpokenText
+  classNames={{
+    word: "spoken-word",
+    past: "spoken-word-past",
+    current: "spoken-word-current",
+  }}
+>
+  Any text you like.
+</SpokenText>
+```
+
+```css
+.spoken-word {
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.spoken-word-past {
+  background-color: var(--spoken-text-past);
+}
+.spoken-word-current {
+  background-color: var(--spoken-text-current);
+  box-shadow: inset 0 -0.12em 0 var(--spoken-text-accent);
+  border-radius: 2px;
+}
+```
+
+One warning worth the ink: do not pad or round the words themselves. The gaps
+between them are painted too, and a box that overlapped one would double the
+colour into a seam at every junction.
+
+## The data attributes
+
+Every word carries its state as an attribute, whether or not you pass any
+classes:
+
+<Props data-spoken-skip>
+  <Prop name="data-spoken-state" type={`"past" | "current" | "future"`}>
+    Where the word sits relative to the playhead. The separator spans carry it
+    too.
+  </Prop>
+  <Prop name="data-spoken-index" type="number">
+    The word's position in the whole document, not in its block.
+  </Prop>
+</Props>
+
+So the entire highlight can be written in plain CSS, with nothing passed to the
+component at all:
+
+```css
+[data-spoken-state="past"] {
+  background: var(--spoken-text-past);
+}
+[data-spoken-state="current"] {
+  background: var(--spoken-text-current);
+}
+```
+
+`data-spoken-index` is what to reach for when one word in particular matters:
+`[data-spoken-index="0"]` is the first word of the document.
+
+## `renderWord`
+
+When a class is not enough, render the word yourself. Whitespace is still
+inserted for you, so the band keeps working.
+
+```tsx
+<SpokenText
+  renderWord={(word) => (
+    <span
+      className={word.state === "current" ? "lit" : undefined}
+      data-spoken-state={word.state}
+      data-spoken-index={word.index}
+    >
+      {word.text}
+    </span>
+  )}
+>
+  Any text you like.
+</SpokenText>
+```
+
+You get a `DisplayWord`: the text exactly as it was written, its `index`, its
+`state`, whether it is `seekable`, and its `start` and `end` in seconds when it
+has been timed. Taking rendering over means taking the click over too: the
+built-in seek-on-click lives on the built-in word.
+
+This site uses `renderWord` for one thing only. A passage that mentions a
+function by name needs that name in the mono face, and a class cannot reach a
+single word, so those passages render their own spans and set the smaller face
+on a span *inside* the word rather than on the word itself. The highlight is
+painted on the word box, and a box in a smaller face would sit a little lower
+and a little shorter than the prose either side of it.
+
+## The player
+
+`<Player>` takes the same kind of map, one class per part, with the same rule:
+supplying one replaces the built-in look for that part.
+
+<Props data-spoken-skip>
+  <Prop name="root" type="string">
+    The wrapper. Replaces the column layout, so it owns the gap between the row
+    and the status line.
+  </Prop>
+  <Prop name="button" type="string">
+    The play and pause button. Style `:disabled` yourself: nothing is
+    pressable until the first block has words in it.
+  </Prop>
+  <Prop name="track" type="string">
+    The scrubber's rail.
+  </Prop>
+  <Prop name="elapsed" type="string">
+    The played portion of the rail.
+  </Prop>
+  <Prop name="thumb" type="string">
+    The dot marking the playhead.
+  </Prop>
+  <Prop name="time" type="string">
+    Elapsed and total. The total is dimmed and marked with a tilde while blocks
+    are still loading.
+  </Prop>
+  <Prop name="status" type="string">
+    The loading and error line. `showStatus={false}` removes it instead.
+  </Prop>
+</Props>
+
+The player above this page is that map with two entries in it:
+
+```tsx
+<Player
+  className="font-mono"
+  classNames={{ root: "docs-player", button: "docs-player-button" }}
+/>
+```
+
+`className` goes on the wrapper alongside whatever `classNames.root` says, so
+the two can be used together: one for the layout, the other for the type.
