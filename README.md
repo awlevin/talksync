@@ -98,9 +98,9 @@ word is being spoken, so you can build whatever UI you like on top of it.
 
 ### Leaving things unspoken
 
-`useSpokenText(text, { debounceMs: 900 })` read aloud as prose is noise, and it
-would wreck the alignment besides. So `code`, `pre`, `kbd`, `samp`, `var`,
-`script`, `style`, `svg`, `canvas`, `iframe` and `math` are skipped by default.
+Code read aloud as prose is noise, and it would wreck the alignment besides. So
+`code`, `pre`, `kbd`, `samp`, `var`, `script`, `style`, `svg`, `canvas`,
+`iframe` and `math` are skipped by default.
 
 Skipped content still renders, untouched, exactly where it is. It is dropped
 only from the text handed to the aligner, so an inline `<code>` in the middle of
