@@ -147,8 +147,9 @@ Every word also carries `data-spoken-state="past" | "current" | "future"` and
 
 Takes the same options as the hook (`endpoint`, `fetchAlignment`,
 `onWordChange`, `debounceMs`, `autoPlay`) and applies them to the whole
-document. `useSpokenTextController()` returns the controller it is holding, for
-building a player of your own.
+document. Anything written on the `<SpokenText>` inside it wins, so a
+`debounceMs` can sit next to the text it is about. `useSpokenTextController()`
+returns the controller it is holding, for building a player of your own.
 
 ### `<Player>`
 

@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -139,12 +141,30 @@ export const SpokenText = ({
   });
   const controller = speech ?? context?.controller ?? owned;
 
+  // The provider holds the controller, so the options written on this
+  // component have to travel with the document it registers. They are read
+  // back through a function, so an inline `fetchAlignment` does not have to be
+  // stable; the primitives are in the effect below, so changing one re-registers
+  // and the provider reads them again. `onWordChange` stays here: this
+  // component already fires it.
+  const optionsRef = useRef<SpokenTextOptions>({});
+  optionsRef.current = { endpoint, fetchAlignment, debounceMs, autoPlay };
+  const readOptions = useCallback(() => optionsRef.current, []);
+
   const register = context?.register;
   useEffect(() => {
     if (!register || speech) return;
-    register(document);
+    register({ document, options: readOptions });
     return () => register(null);
-  }, [register, speech, document]);
+  }, [
+    register,
+    speech,
+    document,
+    readOptions,
+    endpoint,
+    debounceMs,
+    autoPlay,
+  ]);
 
   const { currentWordIndex, currentWord } = controller;
   useEffect(() => {

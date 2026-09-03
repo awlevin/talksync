@@ -469,6 +469,29 @@ describe("<SpokenTextProvider>", () => {
     expect(screen.getByText("~", { exact: false }).textContent).toContain("~");
   });
 
+  it("honours the options written on the <SpokenText> itself", async () => {
+    let calls = 0;
+    render(
+      <SpokenTextProvider>
+        <SpokenText
+          debounceMs={120}
+          fetchAlignment={async (text) => {
+            calls += 1;
+            return aligned(text);
+          }}
+        >
+          One two three
+        </SpokenText>
+      </SpokenTextProvider>,
+    );
+
+    // The provider owns the controller, but the debounce was written next to
+    // the text, so nothing is asked for until the text has settled.
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(calls).toBe(0);
+    await waitFor(() => expect(calls).toBe(1));
+  });
+
   it("self-manages when there is no provider", async () => {
     render(
       <SpokenText
