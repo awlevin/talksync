@@ -1,4 +1,4 @@
-import type { JsonValue, SpeechFn, TranscribeFn } from "../types.js";
+import type { BlockKind, JsonValue, SpeechFn, TranscribeFn } from "../types.js";
 
 /**
  * OpenAI speech and transcription, through the Vercel AI SDK.
@@ -15,8 +15,11 @@ export type OpenAISpeechOptions = {
   model?: string;
   /** Default `"alloy"`. */
   voice?: string;
-  /** How the text should be read. Not supported by every model. */
-  instructions?: string;
+  /**
+   * How the text should be read. Not supported by every model. Pass a function
+   * to say it differently per block: a heading is not read like a sentence.
+   */
+  instructions?: string | ((kind: BlockKind) => string | undefined);
   /** Merged into the `openai` provider options. */
   providerOptions?: Record<string, JsonValue>;
 };
@@ -28,15 +31,18 @@ export const openaiSpeech =
     instructions,
     providerOptions,
   }: OpenAISpeechOptions = {}): SpeechFn =>
-  async (text) => {
+  async (text, { kind }) => {
     const [{ experimental_generateSpeech: generateSpeech }, { openai }] =
       await Promise.all([import("ai"), import("@ai-sdk/openai")]);
+
+    const said =
+      typeof instructions === "function" ? instructions(kind) : instructions;
 
     const { audio } = await generateSpeech({
       model: openai.speech(model),
       text,
       voice,
-      ...(instructions ? { instructions } : {}),
+      ...(said ? { instructions: said } : {}),
       ...(providerOptions ? { providerOptions: { openai: providerOptions } } : {}),
     });
 
