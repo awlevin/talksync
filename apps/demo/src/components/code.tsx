@@ -9,9 +9,18 @@ import { Children, Fragment, type ReactNode } from "react";
  * page shows: tags, attributes, strings, expressions, comments and the handful
  * of keywords that appear. Anything it does not recognise stays the colour of
  * the prose, which is the right answer for text.
+ *
+ * The docs pages fence their snippets, so a fence's language picks the scanner:
+ * shell and JSON are small enough to read on their own terms, and everything
+ * else is TypeScript.
  */
 
+/** What a fence can ask for. Anything else is read as TypeScript. */
+export type CodeLang = "tsx" | "ts" | "bash" | "sh" | "css" | "json" | "text";
+
 type Kind = "plain" | "dim" | "api" | "tag" | "attr" | "str";
+
+type Token = { kind: Kind; text: string };
 
 const CLASS: Partial<Record<Kind, string>> = {
   dim: "tok-dim",
@@ -88,7 +97,7 @@ type Mode = "js" | "tag" | "text";
  * One scan over a snippet, keeping its state between calls: the live example
  * hands its snippet over in pieces, with an editable span in the middle.
  */
-const createScanner = () => {
+const createTypeScriptScanner = () => {
   let mode: Mode = "js";
   /** Where the tag being read returns to, and where each open element does. */
   let pending: Mode = "js";
@@ -100,8 +109,8 @@ const createScanner = () => {
   let closing = false;
   let named = false;
 
-  return (source: string): ReactNode => {
-    const out: { kind: Kind; text: string }[] = [];
+  return (source: string): Token[] => {
+    const out: Token[] = [];
     const push = (kind: Kind, text: string) => {
       const last = out[out.length - 1];
       if (last?.kind === kind) last.text += text;
@@ -236,17 +245,201 @@ const createScanner = () => {
       take("dim", char);
     }
 
-    return out.map((token, index) =>
-      CLASS[token.kind] ? (
-        <span key={index} className={CLASS[token.kind]}>
-          {token.text}
-        </span>
-      ) : (
-        <Fragment key={index}>{token.text}</Fragment>
-      ),
-    );
+    return out;
   };
 };
+
+/* A shell line: the prompt, the command, its flags, and its quoted arguments. */
+const SHELL_COMMENT = /^#[^\n]*/;
+const SHELL_FLAG = /^--?[A-Za-z][\w-]*/;
+const SHELL_WORD = /^[^\s"'#]+/;
+
+/**
+ * Shell. The command is the name worth colouring — `npm`, `pnpm` — and its
+ * flags are the quiet structure, the way an attribute is inside a tag.
+ */
+const createShellScanner = () => {
+  // A line starts with its command; everything after it is an argument.
+  let head = true;
+  return (source: string): Token[] => {
+    const out: Token[] = [];
+    const take = (kind: Kind, text: string) => out.push({ kind, text });
+
+    let i = 0;
+    while (i < source.length) {
+      const rest = source.slice(i);
+      const space = SPACE.exec(rest)?.[0];
+      if (space) {
+        take("plain", space);
+        if (space.includes("\n")) head = true;
+        i += space.length;
+        continue;
+      }
+      const comment = SHELL_COMMENT.exec(rest)?.[0];
+      if (comment) {
+        take("dim", comment);
+        i += comment.length;
+        continue;
+      }
+      const string = STRING.exec(rest)?.[0];
+      if (string) {
+        take("str", string);
+        head = false;
+        i += string.length;
+        continue;
+      }
+      // A `$` is the prompt someone copied, not part of the command.
+      if (rest[0] === "$") {
+        take("dim", "$");
+        i += 1;
+        continue;
+      }
+      const flag = SHELL_FLAG.exec(rest)?.[0];
+      if (flag) {
+        take("attr", flag);
+        head = false;
+        i += flag.length;
+        continue;
+      }
+      const word = SHELL_WORD.exec(rest)?.[0] ?? rest[0];
+      take(head ? "api" : "plain", word);
+      head = false;
+      i += word.length;
+    }
+
+    return out;
+  };
+};
+
+/* CSS: a selector, a property, a value. The three the styling page is about. */
+const CSS_NAME = /^-{0,2}[A-Za-z_][\w-]*/;
+const CSS_NUMBER = /^-?\d[\w.%]*/;
+
+/**
+ * CSS. Selectors read as tags, properties as attributes, and a custom property
+ * keeps the attribute colour wherever it appears, including inside a `var()`,
+ * because that is the name the page is pointing at.
+ */
+const createCssScanner = () => {
+  let depth = 0;
+  // Between the `:` and the `;`, names are values rather than properties.
+  let value = false;
+
+  return (source: string): Token[] => {
+    const out: Token[] = [];
+    const take = (kind: Kind, text: string) => out.push({ kind, text });
+
+    let i = 0;
+    while (i < source.length) {
+      const rest = source.slice(i);
+      const space = SPACE.exec(rest)?.[0];
+      if (space) {
+        take("plain", space);
+        i += space.length;
+        continue;
+      }
+      const comment = BLOCK_COMMENT.exec(rest)?.[0];
+      if (comment) {
+        take("dim", comment);
+        i += comment.length;
+        continue;
+      }
+      const string = STRING.exec(rest)?.[0];
+      if (string) {
+        take("str", string);
+        i += string.length;
+        continue;
+      }
+
+      const char = rest[0];
+      if (char === "{" || char === "}" || char === ";" || char === ":") {
+        if (char === "{") depth += 1;
+        if (char === "}") depth = Math.max(0, depth - 1);
+        if (char === ":" && depth > 0 && !value) value = true;
+        else if (char !== ":") value = false;
+        take("dim", char);
+        i += 1;
+        continue;
+      }
+
+      const name = CSS_NAME.exec(rest)?.[0];
+      if (name) {
+        const custom = name.startsWith("--");
+        take(depth === 0 ? "tag" : !value || custom ? "attr" : "plain", name);
+        i += name.length;
+        continue;
+      }
+      const number = CSS_NUMBER.exec(rest)?.[0];
+      if (number) {
+        take("plain", number);
+        i += number.length;
+        continue;
+      }
+      take("dim", char);
+      i += 1;
+    }
+
+    return out;
+  };
+};
+
+const JSON_ATOM = /^(?:true|false|null|-?\d[\d.eE+-]*)/;
+
+/** JSON. Keys are the structure, values are the literal text. */
+const createJsonScanner = () => (source: string): Token[] => {
+  const out: Token[] = [];
+  const take = (kind: Kind, text: string) => out.push({ kind, text });
+
+  let i = 0;
+  while (i < source.length) {
+    const rest = source.slice(i);
+    const space = SPACE.exec(rest)?.[0];
+    if (space) {
+      take("plain", space);
+      i += space.length;
+      continue;
+    }
+    const string = STRING.exec(rest)?.[0];
+    if (string) {
+      // What follows a string says whether it was a key or a value.
+      const key = /^\s*:/.test(rest.slice(string.length));
+      take(key ? "attr" : "str", string);
+      i += string.length;
+      continue;
+    }
+    const atom = JSON_ATOM.exec(rest)?.[0];
+    if (atom) {
+      take("plain", atom);
+      i += atom.length;
+      continue;
+    }
+    take("dim", rest[0]);
+    i += 1;
+  }
+
+  return out;
+};
+
+const createScanner = (lang: CodeLang) => {
+  if (lang === "bash" || lang === "sh") return createShellScanner();
+  if (lang === "css") return createCssScanner();
+  if (lang === "json") return createJsonScanner();
+  if (lang === "text") return (source: string): Token[] => [
+    { kind: "plain", text: source },
+  ];
+  return createTypeScriptScanner();
+};
+
+const paint = (tokens: Token[]): ReactNode =>
+  tokens.map((token, index) =>
+    CLASS[token.kind] ? (
+      <span key={index} className={CLASS[token.kind]}>
+        {token.text}
+      </span>
+    ) : (
+      <Fragment key={index}>{token.text}</Fragment>
+    ),
+  );
 
 export const Pane = ({
   file,
@@ -271,15 +464,31 @@ export const Pane = ({
 /**
  * A snippet. Strings are scanned; anything else is dropped in as it is, which
  * is how the live example puts an editable passage inside its code.
+ *
+ * `wrap` is on by default because the landing page sets its snippets beside
+ * prose, where a scrollbar would be a surprise. The docs turn it off: a fenced
+ * snippet keeps its own line breaks and scrolls inside its own box.
  */
-export const Code = ({ children }: { children: ReactNode }) => {
-  const scan = createScanner();
+export const Code = ({
+  lang = "tsx",
+  wrap = true,
+  children,
+}: {
+  lang?: CodeLang;
+  wrap?: boolean;
+  children: ReactNode;
+}) => {
+  const scan = createScanner(lang);
   return (
-    <pre className="code overflow-x-auto whitespace-pre-wrap px-4 py-4 sm:px-5 sm:py-5">
+    <pre
+      className={`code overflow-x-auto px-4 py-4 sm:px-5 sm:py-5 ${
+        wrap ? "whitespace-pre-wrap" : "whitespace-pre"
+      }`}
+    >
       <code>
         {Children.toArray(children).map((child, index) =>
           typeof child === "string" ? (
-            <Fragment key={index}>{scan(child)}</Fragment>
+            <Fragment key={index}>{paint(scan(child))}</Fragment>
           ) : (
             child
           ),
