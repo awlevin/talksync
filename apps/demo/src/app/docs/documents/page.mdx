@@ -132,62 +132,72 @@ paragraph are two recordings. It is reported back on the client as
 
 ## Saying what is not on the page
 
-Some of what a reader takes in is not text. A section number is implied by the
-layout; an image says what it says without words; a code sample is
-deliberately silent. `say` fills those gaps, and only in the audio.
+Some of what a listener wants to hear was never written down: which section
+this is, what the picture shows, that a code sample went by unread. `say` puts
+those words into the audio without putting them on the page.
 
 ```tsx
 <SpokenText
   say={{
-    h2: ({ text, count }) => `Section ${count}: ${text}`,
-    img: ({ element }) => element.props.alt,
-    pre: () => "Code sample skipped.",
+    h2: ({ count }) => ({ before: `Section ${count}.` }),
+    pre: () => "A short code sample, skipped.",
+    svg: ({ element }) => `A drawing. ${element.props["aria-label"]}`,
   }}
 >
   …
 </SpokenText>
 ```
 
-It is a map of selector to rule. The selectors are the ones `skip` and `only`
-take: a tag, a `.class`, an `[attr]`. The first matching key wins.
-
-```ts
-say?: Record<string, (info: {
-  text: string;
-  element: ReactElement;
-  count: number;
-  kind: BlockKind;
-}) => string | { before?: string; after?: string } | null | undefined>;
-```
-
-Each rule is called with the element it matched:
+Keys select the way `skip` does: a tag, a `.class`, an `[attr]`. The first key
+that matches an element wins. A rule is handed that element and what it says
+on its own:
 
 <Props data-spoken-skip>
   <Prop name="text" type="string">
-    The element's own spoken text, and `""` for an element that is skipped.
+    The element's own spoken text, after `skip` and `only` have had their say,
+    and `""` for an element that is skipped.
   </Prop>
   <Prop name="element" type="ReactElement">
-    The element itself, which is where an `alt` or a `title` lives.
+    The element itself, which is where an `alt` or an `aria-label` lives.
   </Prop>
   <Prop name="count" type="number">
-    Which match this is, 1-based, per rule, in document order. A rule on `h2`
-    counts only the `h2`s.
+    How many elements this same rule has matched so far, 1-based and in
+    document order. It is what lets the headings number themselves.
   </Prop>
   <Prop name="kind" type="BlockKind">
     What the block is: `"heading"`, `"paragraph"`, `"list"` or `"quote"`.
   </Prop>
 </Props>
 
-Return a string and it replaces the element's spoken text. Return
-`{ before, after }` and it wraps what is already there. Return `null` or
-`undefined` and the rule stands aside, so a rule can decide case by case.
+`{ before }` and `{ after }` keep the element's own words and speak around
+them. A plain string **replaces** them. Returning nothing at all changes
+nothing, so a rule can decide case by case.
 
-A rule on a **skipped** element speaks in its place, which is the point of the
-`pre` example above: the code stays out of the audio and the reader is told
-that something was left out rather than hearing a paragraph end and another
-begin with nothing between them.
+Which of the two to reach for follows from that. Wrap a heading, do not replace
+it: the heading's own words have to stay in the word list or the heading will
+never light up as it is read. The string form is for elements that were not
+going to be spoken anyway.
 
-Injected words are spoken but never rendered. They are hidden tokens in the
-word list, marked `hidden` on the `DisplayWord`, so the words on the page keep
-their exact timings and the highlight does not drift while something unwritten
-is being said.
+```tsx
+h2: ({ count }) => ({ before: `Section ${count}.` }),   // wraps: still lights
+h2: ({ text, count }) => `Section ${count}. ${text}`,   // replaces: never does
+```
+
+A rule on something **skipped** speaks in its place, which is the one way
+skipped content gets a voice. The `pre` above still renders where it was
+written, still unread, and the listener hears a sentence saying it went by.
+
+A rule only reaches what is being spoken. Set an `only` fence and an element
+outside it stays silent, rule or no rule.
+
+The words a rule adds are hidden words. They go into the document's word list
+and into the text handed to the aligner, at the point the element sits, so
+everything around them stays exactly timed, and `<SpokenText>` renders nothing
+for them. While one is being spoken, `currentWordIndex` points at it, no word
+on the page is `current`, and the band waits rather than lighting up over
+nothing. `DisplayWord.hidden` is how you tell them apart, and `SayInfo`,
+`SayResult` and `SayRule` are exported for writing rules of your own.
+
+All three forms are running on [the article](/article): its sections number
+themselves, its code sample announces that it was skipped, and its drawing is
+read out of its `aria-label`.

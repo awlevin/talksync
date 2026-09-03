@@ -28,9 +28,9 @@ to say about one of these, it is linked from the row.
   <Prop name="only" type="(string | ((el) => boolean))[]">
     Speak only these parts of the tree. Unset means all of it.
   </Prop>
-  <Prop name="say" type="Record<string, (info) => string | { before, after } | null>">
-    Say something the page does not write, keyed by selector. First match wins,
-    and the words are spoken but never rendered. [Saying what is not on the
+  <Prop name="say" type="Record<string, SayRule>">
+    Words to speak that are not on the page: a section number, alt text, a note
+    where something was skipped. [Saying what is not on the
     page](/docs/documents).
   </Prop>
   <Prop name="as" type={`"p" | "div" | "span" | … = "div" / "p"`}>
@@ -173,13 +173,22 @@ building a player of your own. Outside a provider it returns nothing.
     yet are untimed, and clicking one fetches that block.
   </Prop>
   <Prop name="hidden" type="boolean">
-    True for a word that is spoken but not written: something a `say` rule put
-    there. It has timings like any other word and is never rendered.
+    True for a word a `say` rule added: spoken, timed like any other word, and
+    never rendered.
   </Prop>
   <Prop name="start, end" type="number | undefined">
     Seconds from the start of the document, not of the block.
   </Prop>
 </Props>
+
+## `SayRule`
+
+`(info: SayInfo) => SayResult`. `SayInfo` is `{ text, element, count, kind }`:
+what the element says on its own, the element itself, how many elements this
+rule has matched so far, and what kind of block it is. `SayResult` is a string,
+which replaces those words, or `{ before?, after? }`, which keeps them and
+speaks around them, or nothing, which changes nothing. All three types are
+exported. [Saying what is not on the page](/docs/documents).
 
 ## `BlockKind`
 

@@ -53,15 +53,14 @@ const Beat = ({
   code?: string[];
   children: string;
 }) => (
-  <div className="border-t border-rule pt-3.5">
+  // The three sit side by side, so the doors line up whatever the sentences
+  // above them do.
+  <div className="flex h-full flex-col border-t border-rule pt-3.5">
     <div className="label mb-2">{title}</div>
     <Talkable code={code} className="text-[0.9375rem] leading-relaxed text-ink-2">
       {children}
     </Talkable>
-    <a
-      className="label mt-3 inline-block hover:text-accent"
-      href={href}
-    >
+    <a className="label mt-auto inline-block self-start pt-4 hover:text-accent" href={href}>
       {more} →
     </a>
   </div>
@@ -113,7 +112,7 @@ export default function HomePage() {
 
           {/* Three beats, then the door. Everything past this is in the docs. */}
           <section className="pb-16 lg:pb-24">
-            <div className="grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-3">
+            <div className="grid grid-cols-1 items-stretch gap-x-10 gap-y-8 sm:grid-cols-3">
               <Beat
                 title="A passage, or a page"
                 href="/docs/documents"
