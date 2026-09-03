@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Api, Code, Dim, Pane } from "@/components/code";
+import { Code, Pane } from "@/components/code";
 import { InstallLine } from "@/components/InstallLine";
 import { LiveExample } from "@/components/LiveExample";
 import { Mark } from "@/components/Mark";
@@ -134,7 +134,7 @@ export default function HomePage() {
             <LiveExample />
             <Talkable className="mt-3 px-1 text-[0.875rem] leading-relaxed text-ink-2">
               Press play, or click any word to hear the passage from there. Show
-              the code and edit the string to make it say something else.
+              the code and edit the passage to make it say something else.
             </Talkable>
           </section>
 
@@ -148,18 +148,9 @@ export default function HomePage() {
                 </Talkable>
               </div>
               <div className="panel overflow-hidden">
-                <Code>
-                  <Dim>{"import "}</Dim>
-                  {"{ "}
-                  <Api>SpokenText</Api>
-                  {" } "}
-                  <Dim>{'from "spoken-text";'}</Dim>
-                  {"\n\n<"}
-                  <Api>SpokenText</Api>
-                  {">Any text you like.</"}
-                  <Api>SpokenText</Api>
-                  {">"}
-                </Code>
+                <Code>{`import { SpokenText } from "spoken-text";
+
+<SpokenText>Any text you like.</SpokenText>`}</Code>
               </div>
             </div>
           </section>
@@ -175,37 +166,21 @@ export default function HomePage() {
             <div className="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[1.15fr_1fr]">
               <div className="panel overflow-hidden">
                 <Pane file="app/api/transcription/route.ts">
-                  <Code>
-                    <Dim>{"import "}</Dim>
-                    {"{\n  "}
-                    <Api>createAlignmentHandler</Api>
-                    {",\n  "}
-                    <Api>openaiSpeech</Api>
-                    {",\n  "}
-                    <Api>openaiTranscription</Api>
-                    {",\n  "}
-                    <Api>vercelBlobCache</Api>
-                    {",\n} "}
-                    <Dim>{'from "spoken-text/server";'}</Dim>
-                    {"\n\n"}
-                    <Dim>{"export const "}</Dim>
-                    {"POST = "}
-                    <Api>createAlignmentHandler</Api>
-                    {"({"}
-                    {"\n  speech: "}
-                    <Api>openaiSpeech</Api>
-                    {'({ model: "tts-1", voice: "nova" }),'}
-                    {"\n  transcribe: "}
-                    <Api>openaiTranscription</Api>
-                    {"({"}
-                    {'\n    model: "whisper-1",'}
-                    {'\n    language: "en",'}
-                    {"\n  }),"}
-                    {"\n  cache: "}
-                    <Api>vercelBlobCache</Api>
-                    {"(),"}
-                    {"\n});"}
-                  </Code>
+                  <Code>{`import {
+  createAlignmentHandler,
+  elevenlabsSpeech,
+  vercelBlobCache,
+} from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: elevenlabsSpeech({
+    voiceSettings: (kind) =>
+      kind === "heading"
+        ? { speed: 0.9, stability: 0.6 }
+        : undefined,
+  }),
+  cache: vercelBlobCache(),
+});`}</Code>
                 </Pane>
               </div>
 
@@ -213,10 +188,33 @@ export default function HomePage() {
                 <div className="border-t border-rule py-3.5">
                   <dt className="label mb-1.5">It is a plain handler</dt>
                   <dd className="text-ink-2">
-                    <Talkable code={["(Request)", "=>", "Response", "{", "content", "}"]}>
-                      A (Request) =&gt; Response that reads &#123; content &#125;
-                      and returns audio plus word-level timings. It mounts
+                    <Talkable
+                      code={["(Request)", "=>", "Response", "{", "content,", "kind", "}"]}
+                    >
+                      A (Request) =&gt; Response that reads &#123; content, kind
+                      &#125; and returns audio plus word-level timings. It mounts
                       anywhere that speaks the web standard, not only Next.js.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">One call, not two</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["elevenlabsSpeech", "tts-1", "whisper-1", "transcribe"]}>
+                      elevenlabsSpeech returns the audio and a timestamp for
+                      every character in one call, so there is nothing to
+                      transcribe and nothing to drift. tts-1 with whisper-1 is
+                      still there, as a speech and a transcribe you pass in.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">Every block says what it is</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["kind", "heading", "paragraph", "list", "quote"]}>
+                      A heading, a paragraph, a list item or a quote: the kind
+                      travels with the text, so a voice can read a title like a
+                      title. It is part of the cache key too.
                     </Talkable>
                   </dd>
                 </div>
@@ -225,15 +223,15 @@ export default function HomePage() {
                   <dd className="text-ink-2">
                     <Talkable
                       code={[
+                        "elevenlabsSpeech",
                         "openaiSpeech",
-                        "openaiTranscription",
                         "vercelBlobCache",
                         "speech",
                         "transcribe",
                         "cache",
                       ]}
                     >
-                      openaiSpeech, openaiTranscription and vercelBlobCache ship
+                      elevenlabsSpeech, openaiSpeech and vercelBlobCache ship
                       with the package, but nothing depends on them. Pass your own
                       speech, transcribe and cache and the package asks for
                       nothing but React.
@@ -244,18 +242,18 @@ export default function HomePage() {
                   <dt className="label mb-1.5">Generated once, ever</dt>
                   <dd className="text-ink-2">
                     <Talkable code={["data:"]}>
-                      The cache key is a hash of the passage, so identical text
-                      hits the same entry. Without a cache the audio comes back
-                      inline as a data: URL, which is fine for a first run and
-                      wrong for anything after it.
+                      The cache key is a hash of the passage and its kind, so
+                      identical text hits the same entry. Without a cache the
+                      audio comes back inline as a data: URL, which is fine for
+                      a first run and wrong for anything after it.
                     </Talkable>
                   </dd>
                 </div>
                 <div className="border-t border-rule py-3.5">
                   <dt className="label mb-1.5">Environment</dt>
                   <dd className="text-ink-2">
-                    <Talkable code={["OPENAI_API_KEY", "BLOB_READ_WRITE_TOKEN"]}>
-                      Those two adapters read OPENAI_API_KEY and
+                    <Talkable code={["ELEVENLABS_API_KEY", "BLOB_READ_WRITE_TOKEN"]}>
+                      These two adapters read ELEVENLABS_API_KEY and
                       BLOB_READ_WRITE_TOKEN.
                     </Talkable>
                   </dd>
@@ -276,29 +274,18 @@ export default function HomePage() {
             <div className="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[1.15fr_1fr]">
               <div className="panel overflow-hidden">
                 <Pane file="app/article/page.tsx">
-                  <Code>
-                    {"<"}
-                    <Api>SpokenTextProvider</Api>
-                    {">"}
-                    {"\n  <header className=\"sticky top-0\">"}
-                    {"\n    <"}
-                    <Api>Player</Api>
-                    {" />"}
-                    {"\n  </header>"}
-                    {"\n\n  <"}
-                    <Api>SpokenText</Api>
-                    {">"}
-                    {"\n    <h1>A jar of flour and water</h1>"}
-                    {"\n    <p>A sourdough starter is the…</p>"}
-                    {"\n    <h2>Feeding it</h2>"}
-                    {"\n    <p>One part starter, five parts…</p>"}
-                    {"\n  </"}
-                    <Api>SpokenText</Api>
-                    {">"}
-                    {"\n</"}
-                    <Api>SpokenTextProvider</Api>
-                    {">"}
-                  </Code>
+                  <Code>{`<SpokenTextProvider>
+  <header className="sticky top-0">
+    <Player />
+  </header>
+
+  <SpokenText>
+    <h1>A jar of flour and water</h1>
+    <p>A sourdough starter is the…</p>
+    <h2>Feeding it</h2>
+    <p>One part starter, five parts…</p>
+  </SpokenText>
+</SpokenTextProvider>`}</Code>
                 </Pane>
               </div>
 
@@ -332,6 +319,18 @@ export default function HomePage() {
                       The walk sees the elements it is handed, not inside a
                       child component. &lt;MyArticle /&gt; is a closed box. MDX
                       output and hand-written pages are both fine.
+                    </Talkable>
+                  </dd>
+                </div>
+                <div className="border-t border-rule py-3.5">
+                  <dt className="label mb-1.5">Left unspoken</dt>
+                  <dd className="text-ink-2">
+                    <Talkable code={["code", "pre", "1:5:5", "skip", "only"]}>
+                      code, pre and the rest of the things nobody wants read
+                      aloud are skipped by default, and still render where they
+                      were written. The article steps over its 1:5:5 and its
+                      feeding table, and the words either side stay in time.
+                      skip and only take it further.
                     </Talkable>
                   </dd>
                 </div>
@@ -387,9 +386,14 @@ export default function HomePage() {
                   Speak only these parts of the tree. Unset means all of it.
                   data-spoken and data-spoken-skip are the per-element forms.
                 </Row>
-                <Row name="classNames" type="{ word, past, current, future }">
-                  Your classes per word state. Supplying one drops the built-in
-                  look for that slot, so your CSS is not fighting inline styles.
+                <Row
+                  name="classNames"
+                  type="{ word, past, current, future, separator }"
+                >
+                  Your classes per word state, and for the gaps between them,
+                  which carry the band from one word to the next. Supplying one
+                  drops the built-in look for that slot, so your CSS is not
+                  fighting inline styles.
                 </Row>
                 <Row name="renderWord" type="(word: DisplayWord) => ReactNode">
                   Take over word rendering entirely. Whitespace is still inserted
@@ -406,7 +410,10 @@ export default function HomePage() {
                 <Row name="endpoint" type={'string = "/api/transcription"'}>
                   Where the passage is posted.
                 </Row>
-                <Row name="fetchAlignment" type="(text) => Promise<Alignment>">
+                <Row
+                  name="fetchAlignment"
+                  type="(text, { kind }) => Promise<Alignment>"
+                >
                   Skip the route and resolve audio and timings yourself.
                 </Row>
                 <Row
@@ -431,9 +438,13 @@ export default function HomePage() {
 
               <div>
                 <div className="api-head mb-2">useSpokenText(text, options)</div>
+                <Talkable className="mb-3 text-[0.9375rem] leading-relaxed text-ink-2">
+                  The headless one. It owns the audio and says which word is
+                  being spoken; the UI is yours.
+                </Talkable>
                 <Cluster
                   title="What is being said"
-                  names="text · words · currentWordIndex · currentWord · segments"
+                  names="text · words · currentWordIndex · currentWord · segments (start · end · status · kind)"
                 />
                 <Cluster
                   title="Where playback is"
@@ -478,34 +489,24 @@ export default function HomePage() {
                   type="endpoint · fetchAlignment · debounceMs · autoPlay"
                 >
                   The same options the hook takes, for the whole document.
+                  Anything written on the &lt;SpokenText&gt; inside it wins, so
+                  a debounceMs can sit next to the text it is about.
                 </Row>
 
                 <div className="panel mt-9 overflow-hidden">
                   <Pane file="a whole page, read as one">
-                    <Code>
-                      {"<"}
-                      <Api>SpokenTextProvider</Api>
-                      {">"}
-                      {"\n  <StickyHeader>"}
-                      {"\n    <"}
-                      <Api>Player</Api>
-                      {" />"}
-                      {"\n  </StickyHeader>"}
-                      {"\n\n  <article>"}
-                      {"\n    <"}
-                      <Api>SpokenText</Api>
-                      {'\n      skip={["code", "figcaption"]}'}
-                      {"\n    >"}
-                      {"\n      <h2>Feeding it</h2>"}
-                      {"\n      <p>One part starter, five…</p>"}
-                      {"\n    </"}
-                      <Api>SpokenText</Api>
-                      {">"}
-                      {"\n  </article>"}
-                      {"\n</"}
-                      <Api>SpokenTextProvider</Api>
-                      {">"}
-                    </Code>
+                    <Code>{`<SpokenTextProvider>
+  <StickyHeader>
+    <Player />
+  </StickyHeader>
+
+  <article>
+    <SpokenText skip={["code", "figcaption"]}>
+      <h2>Feeding it</h2>
+      <p>One part starter, five…</p>
+    </SpokenText>
+  </article>
+</SpokenTextProvider>`}</Code>
                   </Pane>
                 </div>
               </div>
@@ -520,7 +521,7 @@ export default function HomePage() {
                 />
                 <Exports
                   from="spoken-text/server"
-                  names="createAlignmentHandler · openaiSpeech · openaiTranscription · vercelBlobCache · sha256Hex"
+                  names="createAlignmentHandler · elevenlabsSpeech · openaiSpeech · openaiTranscription · vercelBlobCache · sha256Hex"
                 />
               </div>
             </div>
