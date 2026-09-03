@@ -1,4 +1,4 @@
-import type { Alignment, FetchAlignment } from "./types.js";
+import type { Alignment, BlockKind, FetchAlignment } from "./types.js";
 
 export const DEFAULT_ENDPOINT = "/api/transcription";
 
@@ -22,17 +22,17 @@ const errorFrom = async (res: Response): Promise<Error> => {
 };
 
 /**
- * The default aligner: POST `{ content }` to `endpoint`, expect audio and
- * word-level timestamps back. Swap it out with the `fetchAlignment` option
+ * The default aligner: POST `{ content, kind }` to `endpoint`, expect audio
+ * and word-level timestamps back. Swap it out with the `fetchAlignment` option
  * if your backend speaks a different shape.
  */
 export const createEndpointAligner =
   (endpoint: string = DEFAULT_ENDPOINT): FetchAlignment =>
-  async (text: string): Promise<Alignment> => {
+  async (text: string, context: { kind: BlockKind }): Promise<Alignment> => {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text }),
+      body: JSON.stringify({ content: text, kind: context.kind }),
     });
     if (!res.ok) throw await errorFrom(res);
 

@@ -135,7 +135,7 @@ Headings are read. `skip={["h1", "h2", "h3"]}` is the opt-out.
 | `renderWord`      | `(word: DisplayWord) => ReactNode`            |                        | Render words yourself. Whitespace is still inserted for you.                                |
 | `seekOnWordClick` | `boolean`                                     | `true`                 | Click a word to play from there, fetching its block if it has not been asked for.           |
 | `endpoint`        | `string`                                      | `"/api/transcription"` | Route that turns text into audio and timings.                                               |
-| `fetchAlignment`  | `(text: string) => Promise<Alignment>`        |                        | Skip `endpoint` and resolve the alignment however you like.                                 |
+| `fetchAlignment`  | `(text, { kind }) => Promise<Alignment>`      |                        | Skip `endpoint` and resolve the alignment however you like.                                 |
 | `onWordChange`    | `(index: number, word?: DisplayWord) => void` |                        | Fires when the spoken word changes. `-1` means nothing is spoken yet.                       |
 | `debounceMs`      | `number`                                      | `0`                    | Wait this long after `children` stops changing before fetching. Useful behind a textarea.   |
 | `autoPlay`        | `boolean`                                     | `false`                | Start speaking as soon as the audio is ready.                                               |
@@ -173,7 +173,7 @@ off. It returns:
 | ------------------------------------------- | ------------------------------------------------------------------- |
 | `words`                                     | `DisplayWord[]`: text, index, `past \| current \| future`, timings  |
 | `currentWordIndex`, `currentWord`           | The word being spoken, across the document, or `-1` / `undefined`    |
-| `segments`                                  | `{ start, end, status }[]`: one per block, over `words`               |
+| `segments`                                  | `{ start, end, kind, status }[]`: one per block, over `words`         |
 | `status`, `isLoading`, `isPlaying`, `error` | What it is doing right now                                           |
 | `currentTime`, `duration`, `audioUrl`       | Playback position and source                                         |
 | `durationIsEstimate`                        | True while `duration` still counts unloaded blocks at a reading pace |
@@ -193,46 +193,106 @@ that route in one line:
 // app/api/transcription/route.ts
 import {
   createAlignmentHandler,
-  openaiSpeech,
-  openaiTranscription,
+  elevenlabsSpeech,
   vercelBlobCache,
 } from "spoken-text/server";
 
 export const POST = createAlignmentHandler({
-  speech: openaiSpeech({ model: "tts-1", voice: "nova" }),
-  transcribe: openaiTranscription({ model: "whisper-1", language: "en" }),
+  speech: elevenlabsSpeech(),
   cache: vercelBlobCache(),
 });
 ```
+
+That is the whole route. ElevenLabs returns the audio and a timestamp for every
+character of the text in one call, so there is nothing to transcribe and nothing
+to drift: the timings are the model's own record of what it said.
 
 `createAlignmentHandler` returns a plain `(Request) => Promise<Response>`, so it
 mounts in a Next.js route handler, a Hono route, a Deno server: anywhere the
 web standard is spoken.
 
-### The three adapters are optional
+`elevenlabsSpeech` needs `ELEVENLABS_API_KEY` (or `ELEVEN_LABS_API_KEY`) in the
+environment, or an `apiKey` passed to it. It defaults to George, a premade
+voice. Premade voices work on every plan, including the free tier; the voice
+library needs a paid one.
 
-Nothing in the package requires OpenAI or Vercel. `speech`, `transcribe` and
-`cache` are yours to supply, and the bundled adapters are opt-in helpers that
-import their dependencies only when called:
+| Option          | Default                            | What it does                                    |
+| --------------- | ---------------------------------- | ----------------------------------------------- |
+| `voiceId`       | `"JBFqnCBsd6RMkjVDRZzb"` (George)  | Any voice you can reach on your plan.            |
+| `modelId`       | `"eleven_multilingual_v2"`         |                                                  |
+| `outputFormat`  | `"mp3_44100_128"`                  | The content type follows from it.                |
+| `voiceSettings` |                                    | `stability`, `similarity_boost`, `style`, `speed`, `use_speaker_boost` — or a function of the block's kind. |
+| `apiKey`        | `ELEVENLABS_API_KEY`               |                                                  |
 
-| Adapter                                 | Needs                                        |
-| --------------------------------------- | -------------------------------------------- |
-| `openaiSpeech`, `openaiTranscription`   | `ai`, `@ai-sdk/openai`, and `OPENAI_API_KEY`  |
-| `vercelBlobCache`                       | `@vercel/blob`, and `BLOB_READ_WRITE_TOKEN`   |
+### With OpenAI instead
+
+`tts-1` hands back an MP3 and nothing else, so it needs `whisper-1` to read the
+timings back off the recording. Two model calls rather than one, and the two
+can disagree — see [How words are matched to
+timings](#how-words-are-matched-to-timings):
+
+```ts
+import { openaiSpeech, openaiTranscription } from "spoken-text/server";
+
+export const POST = createAlignmentHandler({
+  speech: openaiSpeech({
+    model: "gpt-4o-mini-tts",
+    voice: "nova",
+    instructions: (kind) =>
+      kind === "heading" ? "Announce it, then pause." : "Read it warmly.",
+  }),
+  transcribe: openaiTranscription({ model: "whisper-1", language: "en" }),
+  cache: vercelBlobCache(),
+});
+```
+
+### What each block is
+
+Every block says what it is, so a voice can read a title like a title. The
+client sends `{ content, kind }`, where `kind` is `"heading"`, `"paragraph"`,
+`"list"` or `"quote"`, and the handler passes it on:
+
+```ts
+speech: elevenlabsSpeech({
+  voiceSettings: (kind) =>
+    kind === "heading" ? { speed: 0.9, stability: 0.6 } : undefined,
+}),
+```
+
+Headings are `h1`–`h6`, list items are `li`, quotes are `blockquote`, and
+everything else is a paragraph. A block that does not say what it is — a `p`, a
+`div` — keeps the kind it sits inside, so the paragraph markdown puts inside a
+blockquote is still read as a quote. `kind` is part of the cache key, so the
+same words as a heading and as a paragraph are two recordings.
+
+`segments[].kind` reports it on the client, and `kind` reaches the request
+body of your own `fetchAlignment` too.
+
+### The adapters are optional
+
+Nothing in the package requires ElevenLabs, OpenAI or Vercel. `speech`,
+`transcribe` and `cache` are yours to supply, and the bundled adapters are
+opt-in helpers that import their dependencies only when called:
+
+| Adapter                               | Needs                                                    |
+| ------------------------------------- | -------------------------------------------------------- |
+| `elevenlabsSpeech`                    | `ELEVENLABS_API_KEY`. No package: it is one `fetch`.       |
+| `openaiSpeech`, `openaiTranscription` | `ai`, `@ai-sdk/openai`, and `OPENAI_API_KEY`               |
+| `vercelBlobCache`                     | `@vercel/blob`, and `BLOB_READ_WRITE_TOKEN`                |
 
 Install only the ones you use. They are optional peer dependencies, so nothing
 is pulled in on your behalf.
 
-Writing your own is small:
+Writing your own is small. Return `words` from `speech` if your model times its
+own output, and leave `transcribe` out:
 
 ```ts
 export const POST = createAlignmentHandler({
-  speech: async (text) => ({
-    audio: await myTts(text), // a Uint8Array
+  speech: async (text, { kind }) => ({
+    audio: await myTts(text, kind), // a Uint8Array
     contentType: "audio/mpeg",
-  }),
-  transcribe: async ({ audio }) => ({
-    words: await myAligner(audio), // [{ text, start, end }, …]
+    words: [{ text: "Hello", start: 0, end: 0.42 }, /* … */],
+    duration: 3.1,
   }),
   cache: {
     get: (hash) => redis.get(`speech:${hash}`),
@@ -246,35 +306,57 @@ export const POST = createAlignmentHandler({
 });
 ```
 
-Other options: `maxLength` (default `2000` characters), `hash` (default SHA-256
-of the passage, which you can override to fold the voice or model into the key)
-and `onError`.
+If it does not, add a `transcribe` and the handler asks it instead:
+
+```ts
+transcribe: async ({ audio }) => ({
+  words: await myAligner(audio), // [{ text, start, end }, …]
+}),
+```
+
+Supply neither and the handler tells you so, by name, on the first request.
+
+Other options: `maxLength` (default `2000` characters), `hash`
+(`(text, kind) => string`, default the SHA-256 of both, which you can override
+to fold the voice or model into the key) and `onError`.
 
 ## How the audio is made and cached
 
-The bundled adapters do two OpenAI calls: `tts-1` turns the text into an MP3,
-then `whisper-1` transcribes that MP3 back with word-level timestamps. Reading
-the timings off the generated audio, rather than guessing them from the text, is
-what keeps the highlight honest.
+`elevenlabsSpeech` does one call: the audio comes back with a timestamp for
+every character, and those characters are grouped into words. Reading the
+timings off the generated audio, rather than guessing them from the text, is
+what keeps the highlight honest — and taking them from the model that did the
+speaking means there is no second opinion to disagree with.
 
-Two model calls per passage is slow and not free, so nothing is generated twice.
-The passage is hashed with SHA-256 and handed to your `cache`, which is asked
-first on every request. With `vercelBlobCache` the audio and the timings land at
+`openaiSpeech` cannot do that, so it takes two calls: `tts-1` turns the text
+into an MP3, then `whisper-1` transcribes that MP3 back with word-level
+timestamps. See [How words are matched to
+timings](#how-words-are-matched-to-timings) for what that costs.
+
+A model call per passage is slow and not free, so nothing is generated twice.
+The passage and its kind are hashed with SHA-256 and handed to your `cache`,
+which is asked first on every request. With `vercelBlobCache` the audio and the timings land at
 `spoken-text/<hash>/audio` and `spoken-text/<hash>/alignment.json`. Identical
 text anywhere, by anyone, is a cache hit and comes back in milliseconds. On the
 client, the same passage is only ever fetched once per page: two components
 sharing a passage share one request, and remounting one resolves from memory.
 
 The cache is content-addressed and never invalidated, which is fine because the
-key covers the entire input. Change a comma and you get a new hash and a new
-recording. Change the *voice*, though, and the key does not move on its own, so
-pass a `hash` that includes it if you switch voices at runtime.
+key covers the entire input. Change a comma, or make a paragraph a heading, and
+you get a new hash and a new recording. Change the *voice*, though, and the key
+does not move on its own, so pass a `hash` that includes it if you switch voices
+at runtime.
 
 Leave `cache` out entirely and every request regenerates the audio and returns it
 inline as a `data:` URL. That is fine for a first look and far too slow and
 expensive for anything else.
 
 ## How words are matched to timings
+
+This is the transcriber's problem, and `elevenlabsSpeech` does not have it: its
+timings are already per character of the text you sent, so the words it reports
+are the words you wrote. It matters when `speech` returns no timings and a
+`transcribe` fills them in.
 
 Whisper does not tokenize on whitespace, so the words you render and the words it
 heard are two different lists. `State-of-the-art tools cost $1,200 per seat,
@@ -310,6 +392,10 @@ route.
 
 ## Known limitations
 
+**Everything here is about the transcribed path.** A `speech` that returns its
+own `words` — `elevenlabsSpeech` does — has none of these problems, because
+nothing is being matched.
+
 **Words respoken as different words are not matched.** The alignment compares
 letters and digits, so it only works when the transcriber spells a token the way
 you did. If the speech model reads something aloud and the transcriber writes it
@@ -339,7 +425,7 @@ MDX output is fine, because MDX hands you real `h2` and `p` elements.
 
 Other things worth knowing: the alignment is tuned for English, the handler caps
 the input at 2,000 characters per block by default, and the first block takes a
-while on a cache miss because both model calls run before anything plays.
+while on a cache miss because the audio has to be made before anything plays.
 
 ## Repository
 

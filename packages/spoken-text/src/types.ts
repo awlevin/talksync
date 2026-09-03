@@ -32,8 +32,17 @@ export type DisplayWord = {
   end?: number;
 };
 
+/**
+ * What kind of block a passage came from. It travels with the text so a voice
+ * can read a heading like a heading instead of like the sentence after it.
+ */
+export type BlockKind = "heading" | "paragraph" | "list" | "quote";
+
 /** Turn text into audio + word timings. Replaces the default `endpoint` POST. */
-export type FetchAlignment = (text: string) => Promise<Alignment>;
+export type FetchAlignment = (
+  text: string,
+  context: { kind: BlockKind },
+) => Promise<Alignment>;
 
 export type SpokenTextStatus = "idle" | "loading" | "ready" | "error";
 
@@ -49,6 +58,8 @@ export type SpokenSegment = {
   start: number;
   /** One past this block's last word. */
   end: number;
+  /** What the block is, as the voice was told to read it. */
+  kind: BlockKind;
   status: SegmentStatus;
 };
 

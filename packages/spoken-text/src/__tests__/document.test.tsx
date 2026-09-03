@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { collectDocument, DEFAULT_SKIP } from "../document.js";
+import {
+  collectDocument,
+  DEFAULT_SKIP,
+  documentFromText,
+} from "../document.js";
 
 const rules = { skip: DEFAULT_SKIP };
 
@@ -76,6 +80,87 @@ describe("collectDocument - walking a tree", () => {
     expect(document.words).toHaveLength(6);
     expect(document.segments.map((s) => s.start)).toEqual([0, 2, 5]);
     expect(document.segments.map((s) => s.end)).toEqual([2, 5, 6]);
+  });
+});
+
+/** What each block is, so the voice can be told how to read it. */
+const kinds = (document: ReturnType<typeof collectDocument>) =>
+  document.segments.map((s) => s.kind);
+
+describe("collectDocument - what each block is", () => {
+  it("names a heading, a paragraph, a list item and a quote", () => {
+    const document = collectDocument(
+      <div>
+        <h2>The title</h2>
+        <p>The prose.</p>
+        <ul>
+          <li>One thing.</li>
+          <li>Another thing.</li>
+        </ul>
+        <blockquote>A quiet aside.</blockquote>
+      </div>,
+      rules,
+    );
+
+    expect(kinds(document)).toEqual([
+      "heading",
+      "paragraph",
+      "list",
+      "list",
+      "quote",
+    ]);
+  });
+
+  it("reads every heading level as a heading", () => {
+    const document = collectDocument(
+      <>
+        <h1>One</h1>
+        <h3>Three</h3>
+        <h6>Six</h6>
+      </>,
+      rules,
+    );
+
+    expect(kinds(document)).toEqual(["heading", "heading", "heading"]);
+  });
+
+  it("keeps the quote a quote when markdown wraps it in a paragraph", () => {
+    // This is what every markdown renderer emits, so the inner `p` must not
+    // talk over the block it sits in.
+    const document = collectDocument(
+      <>
+        <blockquote>
+          <p>A quiet aside.</p>
+        </blockquote>
+        <ul>
+          <li>
+            <p>A loose list item.</p>
+          </li>
+        </ul>
+      </>,
+      rules,
+    );
+
+    expect(kinds(document)).toEqual(["quote", "list"]);
+  });
+
+  it("does not let one block's kind leak into the next", () => {
+    const document = collectDocument(
+      <>
+        <blockquote>A quiet aside.</blockquote>
+        <p>Back to prose.</p>
+      </>,
+      rules,
+    );
+
+    expect(kinds(document)).toEqual(["quote", "paragraph"]);
+  });
+
+  it("reads a bare string, and anything outside a block, as prose", () => {
+    expect(kinds(documentFromText("Any text you like."))).toEqual(["paragraph"]);
+    expect(kinds(collectDocument(<div>Loose words.</div>, rules))).toEqual([
+      "paragraph",
+    ]);
   });
 });
 

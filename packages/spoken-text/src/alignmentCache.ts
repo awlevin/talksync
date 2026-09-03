@@ -1,7 +1,8 @@
-import type { Alignment } from "./types.js";
+import type { Alignment, BlockKind } from "./types.js";
 
 /**
- * A tiny module-level cache for resolved alignments, keyed by endpoint + text.
+ * A tiny module-level cache for resolved alignments, keyed by endpoint, text
+ * and kind.
  *
  * Turning a passage into audio costs two model calls, so the same passage must
  * never be requested twice: two `<SpokenText>` components sharing a passage
@@ -25,9 +26,16 @@ const remember = (key: string, value: Alignment): void => {
   }
 };
 
-/** The key a passage is cached under. */
-export const alignmentKey = (endpoint: string, text: string): string =>
-  JSON.stringify([endpoint, text]);
+/**
+ * The key a passage is cached under. `kind` is part of it because a heading
+ * and a paragraph of the same words are read differently, so they are two
+ * recordings.
+ */
+export const alignmentKey = (
+  endpoint: string,
+  text: string,
+  kind: BlockKind,
+): string => JSON.stringify([endpoint, text, kind]);
 
 /** An alignment already in memory, if there is one. */
 export const peekAlignment = (key: string): Alignment | undefined =>

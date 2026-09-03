@@ -2,6 +2,7 @@ import { sha256Hex, toBase64 } from "./hash.js";
 import type {
   AlignmentHandlerOptions,
   AlignmentResponseBody,
+  BlockKind,
   CachedAlignment,
   SpeechAudio,
   SpokenWord,
@@ -9,17 +10,19 @@ import type {
 
 const DEFAULT_MAX_LENGTH = 2000;
 
+const KINDS: readonly BlockKind[] = ["heading", "paragraph", "list", "quote"];
+
 const json = (body: unknown, status: number): Response =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 
-/** Read `{ content }` off the request, or say why it could not be read. */
+/** Read `{ content, kind }` off the request, or say why it could not be read. */
 const readContent = async (
   request: Request,
   maxLength: number,
-): Promise<{ content: string } | { error: string }> => {
+): Promise<{ content: string; kind: BlockKind } | { error: string }> => {
   let body: unknown;
   try {
     body = await request.json();
@@ -27,14 +30,24 @@ const readContent = async (
     return { error: "Expected a JSON body." };
   }
 
-  const content = (body as { content?: unknown } | null)?.content;
+  const parsed = body as { content?: unknown; kind?: unknown } | null;
+
+  const content = parsed?.content;
   if (typeof content !== "string" || content.trim() === "") {
     return { error: "Expected a non-empty string at `content`." };
   }
   if (content.length > maxLength) {
     return { error: `\`content\` is longer than ${maxLength} characters.` };
   }
-  return { content };
+
+  // A client that predates `kind`, or one that speaks only in prose, is read
+  // as prose rather than turned away.
+  const kind = parsed?.kind;
+  if (kind !== undefined && !KINDS.includes(kind as BlockKind)) {
+    return { error: `\`kind\` must be one of ${KINDS.join(", ")}.` };
+  }
+
+  return { content, kind: (kind as BlockKind | undefined) ?? "paragraph" };
 };
 
 /** No cache configured: hand the audio back inline. */
@@ -60,16 +73,19 @@ const inlineAlignment = (
  * export const POST = createAlignmentHandler({ speech, transcribe, cache });
  * ```
  *
- * Speech, transcription and storage are all yours to supply. `openaiSpeech`,
- * `openaiTranscription` and `vercelBlobCache` are bundled as opt-in adapters,
- * and nothing in the package requires them.
+ * Speech, transcription and storage are all yours to supply. `elevenlabsSpeech`,
+ * `openaiSpeech`, `openaiTranscription` and `vercelBlobCache` are bundled as
+ * opt-in adapters, and nothing in the package requires them.
+ *
+ * `transcribe` is only needed when `speech` does not hand back word timings of
+ * its own. ElevenLabs does; OpenAI does not.
  */
 export const createAlignmentHandler = ({
   speech,
   transcribe,
   cache,
   maxLength = DEFAULT_MAX_LENGTH,
-  hash = sha256Hex,
+  hash = (text, kind) => sha256Hex(`${kind}\n${text}`),
   onError = (error) => console.error("[spoken-text] alignment failed", error),
 }: AlignmentHandlerOptions) => {
   return async (request: Request): Promise<Response> => {
@@ -77,17 +93,34 @@ export const createAlignmentHandler = ({
     if ("error" in parsed) return json({ error: parsed.error }, 400);
 
     try {
-      const key = await hash(parsed.content);
+      const key = await hash(parsed.content, parsed.kind);
 
       const cached = await cache?.get(key);
       if (cached) return json(cached satisfies AlignmentResponseBody, 200);
 
-      const audio = await speech(parsed.content);
-      const transcript = await transcribe(audio);
+      const audio = await speech(parsed.content, { kind: parsed.kind });
+
+      // A speech model that timestamps its own output needs no transcriber.
+      let words: SpokenWord[];
+      let duration: number | undefined;
+      if (audio.words) {
+        words = audio.words;
+        duration = audio.duration;
+      } else if (transcribe) {
+        const transcript = await transcribe(audio);
+        words = transcript.words;
+        duration = transcript.duration;
+      } else {
+        throw new Error(
+          "No word timings: `speech` returned none and no `transcribe` was given. " +
+            "Use a speech adapter that timestamps its output, such as `elevenlabsSpeech`, " +
+            "or pass a `transcribe` such as `openaiTranscription`.",
+        );
+      }
 
       const alignment = cache
-        ? await cache.set(key, audio, transcript.words, transcript.duration)
-        : inlineAlignment(audio, transcript.words, transcript.duration);
+        ? await cache.set(key, audio, words, duration)
+        : inlineAlignment(audio, words, duration);
 
       return json(alignment satisfies AlignmentResponseBody, 200);
     } catch (error) {

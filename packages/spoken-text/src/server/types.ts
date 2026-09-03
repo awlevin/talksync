@@ -1,6 +1,9 @@
-import type { SpokenWord } from "../types.js";
+import type { BlockKind, SpokenWord } from "../types.js";
 
-export type { SpokenWord };
+export type { BlockKind, SpokenWord };
+
+/** What the client says about the passage, beyond the text itself. */
+export type SpeechContext = { kind: BlockKind };
 
 /** Anything that survives `JSON.stringify`. */
 export type JsonValue =
@@ -16,10 +19,24 @@ export type SpeechAudio = {
   audio: Uint8Array;
   /** For example `"audio/mpeg"`. Used as the `Content-Type` when stored. */
   contentType: string;
+  /**
+   * Word timings, when the speech model returned them with the audio. Supplying
+   * them skips transcription entirely: they are the model's own record of what
+   * it said, so there is no second model to disagree with.
+   */
+  words?: SpokenWord[];
+  /** Total length in seconds, if the speech model reported one. */
+  duration?: number;
 };
 
-/** Turn a passage into audio. */
-export type SpeechFn = (text: string) => Promise<SpeechAudio>;
+/**
+ * Turn a passage into audio. `context` tells the voice what kind of block it
+ * is reading; an adapter written as `(text) => …` ignores it and still fits.
+ */
+export type SpeechFn = (
+  text: string,
+  context: SpeechContext,
+) => Promise<SpeechAudio>;
 
 /** What a transcriber heard in the generated audio. */
 export type Transcript = {
@@ -63,8 +80,11 @@ export type AlignmentCache = {
 export type AlignmentHandlerOptions = {
   /** Turns the passage into audio. */
   speech: SpeechFn;
-  /** Reads word-level timings back off that audio. */
-  transcribe: TranscribeFn;
+  /**
+   * Reads word-level timings back off that audio. Only needed when `speech`
+   * does not return `words` of its own.
+   */
+  transcribe?: TranscribeFn;
   /**
    * Where generated audio is kept. Without one, every request regenerates the
    * audio and returns it inline as a `data:` URL — fine for a local try-out,
@@ -74,11 +94,11 @@ export type AlignmentHandlerOptions = {
   /** Longest passage accepted, in characters. Default `2000`. */
   maxLength?: number;
   /**
-   * The cache key for a passage. Default: the SHA-256 of the text. Override it
-   * to fold the voice or model into the key, so changing either misses the
-   * cache instead of replaying the old recording.
+   * The cache key for a passage. Default: the SHA-256 of the kind and the text.
+   * Override it to fold the voice or model into the key, so changing either
+   * misses the cache instead of replaying the old recording.
    */
-  hash?: (text: string) => string | Promise<string>;
+  hash?: (text: string, kind: BlockKind) => string | Promise<string>;
   /** Called with anything thrown while generating. Default: `console.error`. */
   onError?: (error: unknown) => void;
 };

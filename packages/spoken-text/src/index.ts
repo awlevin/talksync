@@ -36,6 +36,7 @@ export type { SpokenSpan } from "./align.js";
 
 export type {
   Alignment,
+  BlockKind,
   DisplayWord,
   FetchAlignment,
   SegmentStatus,
