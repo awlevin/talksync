@@ -26,6 +26,11 @@
     --accent: 209 68% 37%;
     --lit: 202 84% 70%;
 
+    /* A snippet, in the same hue: markup, its attributes, and its strings. */
+    --tok-tag: 210 36% 39%;
+    --tok-attr: 208 24% 52%;
+    --tok-str: 195 44% 33%;
+
     /* What `<SpokenText>` reads for its built-in highlight. */
     --spoken-text-past: hsl(202 84% 70% / 0.42);
     --spoken-text-current: hsl(202 84% 70%);
@@ -46,6 +51,10 @@
 
       --accent: 203 86% 74%;
       --lit: 200 78% 62%;
+
+      --tok-tag: 205 32% 74%;
+      --tok-attr: 205 20% 60%;
+      --tok-str: 190 40% 66%;
 
       /* Light text sits on these, so the lit word is a wash, not a block. */
       --spoken-text-past: hsl(200 78% 62% / 0.16);
@@ -210,12 +219,24 @@
       font-size: 0.8125rem;
     }
   }
+  /* A snippet is read in one hue at four strengths, so the code sits inside
+     the page rather than shouting a rainbow at it. Keywords and punctuation
+     recede, tags and attributes are the quiet structure, strings are the
+     literal text, and the accent is kept for the package's own names. */
   .tok-dim {
     color: hsl(var(--ink-2));
   }
-  /* The package's own names are the only thing in a snippet worth colouring. */
   .tok-api {
     color: hsl(var(--accent));
+  }
+  .tok-tag {
+    color: hsl(var(--tok-tag));
+  }
+  .tok-attr {
+    color: hsl(var(--tok-attr));
+  }
+  .tok-str {
+    color: hsl(var(--tok-str));
   }
 }
 
