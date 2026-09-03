@@ -1,6 +1,6 @@
 {
   "name": "spoken-text",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Wrap text in one React component, hear it read aloud, and watch each word light up as it is spoken.",
   "keywords": [
     "react",
